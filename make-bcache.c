@@ -1,3 +1,5 @@
+#define _FILE_OFFSET_BITS	64
+#define __USE_FILE_OFFSET64
 #define _XOPEN_SOURCE 500
 
 #include <fcntl.h>
@@ -10,6 +12,7 @@
 #include <sys/ioctl.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <unistd.h>
 
 static const char bcache_magic[] = {
 	0xc6, 0x85, 0x73, 0xf6, 0x4e, 0x1a, 0x45, 0xca,
@@ -34,47 +37,86 @@ struct bucket_disk {
 
 char zero[4096];
 
-int main(int argc, char **argv)
+long getblocks(int fd)
 {
-	long n;
-	int fd, i;
+	long ret;
 	struct stat statbuf;
-	struct cache_sb sb;
-
-	if (argc < 2) {
-		printf("Please supply a device\n");
-		exit(EXIT_FAILURE);
-	}
-
-	fd = open(argv[1], O_RDWR);
-	if (!fd) {
-		perror("Can't open dev\n");
-		exit(EXIT_FAILURE);
-	}
-
 	if (fstat(fd, &statbuf)) {
 		perror("stat error\n");
 		exit(EXIT_FAILURE);
 	}
-	if (!S_ISBLK(statbuf.st_mode))
-		n = statbuf.st_blocks;
-	else
-		if (ioctl(fd, BLKGETSIZE, &n)) {
+	ret = statbuf.st_blocks;
+	if (S_ISBLK(statbuf.st_mode))
+		if (ioctl(fd, BLKGETSIZE, &ret)) {
 			perror("ioctl error");
 			exit(EXIT_FAILURE);
 		}
+	return ret;
+}
+
+long hatoi(const char *s)
+{
+	char *e;
+	long long i = strtol(s, &e, 10);
+	switch (*e) {
+		case 't':
+		case 'T':
+			i *= 1024;
+		case 'g':
+		case 'G':
+			i *= 1024;
+		case 'm':
+		case 'M':
+			i *= 1024;
+		case 'k':
+		case 'K':
+			i *= 1024;
+	}
+	return i;
+}
+
+int main(int argc, char **argv)
+{
+	int64_t nblocks, bucketsize = 1024, blocksize = 8;
+	int fd, i, c;
+	struct cache_sb sb;
+
+	while ((c = getopt(argc, argv, "b:")) != -1) {
+		switch (c) {
+		case 'b':
+			bucketsize = hatoi(optarg) / 512;
+			break;
+		}
+	}
+
+	if (argc <= optind) {
+		printf("Please supply a device\n");
+		exit(EXIT_FAILURE);
+	}
+
+	fd = open(argv[optind], O_RDWR);
+	if (fd == -1) {
+		perror("Can't open dev\n");
+		exit(EXIT_FAILURE);
+	}
+	nblocks = getblocks(fd);
+
+	if (bucketsize < blocksize ||
+	    bucketsize > nblocks / 8) {
+		printf("Bad bucket size %li\n", bucketsize);
+		exit(EXIT_FAILURE);
+	}
 
 	memcpy(sb.magic, bcache_magic, 16);
 	sb.version = 0;
-	sb.block_size = 8;
-	sb.bucket_size = 32;
-	sb.nbuckets = n / sb.bucket_size;
+	sb.block_size = blocksize;
+	sb.bucket_size = bucketsize;
+	sb.nbuckets = nblocks / sb.bucket_size;
 
 	do
 		sb.first_bucket = ((--sb.nbuckets * sizeof(struct bucket_disk))
 				   + 4096 * 3) / (sb.bucket_size * 512) + 1;
-	while ((sb.nbuckets + sb.first_bucket) * sb.bucket_size * 512
-	       > statbuf.st_size);
+	while ((sb.nbuckets + sb.first_bucket) * sb.bucket_size > nblocks);
 
 	sb.journal_start = sb.first_bucket;
 

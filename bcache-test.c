@@ -71,8 +71,9 @@ long getblocks(int fd)
 int main(int argc, char **argv)
 {
 	bool walk = false, randsize = false, verbose = false;
-	int fd1, fd2, direct = 0;
-	long size, i;
+	int fd1, fd2, direct = 0, nbytes = 4096, j;
+	unsigned long size, i = 0, offset = 0;
+	void *buf1 = NULL, *buf2 = NULL;
 
 	if (argc < 3) {
 		printf("Please enter a cache device and raw device\n");
@@ -82,12 +83,16 @@ int main(int argc, char **argv)
 	for (i = 3; i < argc; i++) {
 		if (strcmp(argv[i], "direct") == 0)
 			direct = O_DIRECT;
-		if (strcmp(argv[i], "walk") == 0)
+		else if (strcmp(argv[i], "walk") == 0)
 			walk = true;
-		if (strcmp(argv[i], "verbose") == 0)
+		else if (strcmp(argv[i], "verbose") == 0)
 			verbose = true;
-		if (strcmp(argv[i], "size") == 0)
+		else if (strcmp(argv[i], "size") == 0)
 			randsize = true;
+		else {
+			printf("Uknown argument %s\n", argv[i]);
+			exit(EXIT_FAILURE);
+		}
 	}
 
 	fd1 = open(argv[1], O_RDONLY|direct);
@@ -97,29 +102,42 @@ int main(int argc, char **argv)
 		exit(EXIT_FAILURE);
 	}
 
-	size = MIN(getblocks(fd1), getblocks(fd2)) / 8;
+	size = MIN(getblocks(fd1), getblocks(fd2)) / 8 - 16;
 	printf("size %li\n", size);
 
-	for (i = 0;; i++) {
-		char buf1[4096 * 16], buf2[4096 * 16];
-		long offset;
-		int pages = randsize ? MAX(MIN(abs(normal()) * 4, 16), 1) : 1;
+	if (posix_memalign(&buf1, 4096, 4096 * 16) ||
+	    posix_memalign(&buf2, 4096, 4096 * 16)) {
+		printf("Could not allocate buffers\n");
+		exit(EXIT_FAILURE);
+	}
 
-		offset = walk ? offset * normal() * 2 : random();
+	while (1) {
+		if (randsize)
+			nbytes = 4096 * (int) (drand48() * 16 + 1);
+
+		offset += walk ? normal() * 60 : random();
 		offset %= size;
+		assert(offset < size);
 
-		if (verbose)
-			printf("Loop %li offset %li\n", i, offset);
-		else if (!(i % 100))
-			printf("Loop %li\n", i);
+		do {
+			if (verbose)
+				printf("Loop %li offset %li sectors %i\n",
+				       i, offset << 3, nbytes >> 9);
+			else if (!(i % 100))
+				printf("Loop %li\n", i);
 
-		Pread(fd1, buf1, 4096 * pages, offset << 12);
-		Pread(fd2, buf2, 4096 * pages, offset << 12);
+			Pread(fd1, buf1, nbytes, offset << 12);
+			Pread(fd2, buf2, nbytes, offset << 12);
 
-		if (memcmp(buf1, buf2, 4096 * pages)) {
-			printf("Bad read! offset %li", offset << 12);
-			exit(EXIT_FAILURE);
-		}
+			for (j = 0; j < nbytes; j += 512)
+				if (memcmp(buf1 + j,
+					   buf2 + j,
+					   512)) {
+					printf("Bad read! offset %li sectors %i, sector %i\n",
+					       offset << 3, nbytes >> 9, j >> 9);
+					exit(EXIT_FAILURE);
+				}
+		} while (!(i++ & 1));
 	}
 err:
 	perror("Read error");
