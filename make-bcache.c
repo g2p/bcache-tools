@@ -45,7 +45,7 @@ long getblocks(int fd)
 		perror("stat error\n");
 		exit(EXIT_FAILURE);
 	}
-	ret = statbuf.st_blocks;
+	ret = statbuf.st_size / 512;
 	if (S_ISBLK(statbuf.st_mode))
 		if (ioctl(fd, BLKGETSIZE, &ret)) {
 			perror("ioctl error");
@@ -77,7 +77,7 @@ long hatoi(const char *s)
 
 int main(int argc, char **argv)
 {
-	int64_t nblocks, bucketsize = 1024, blocksize = 8;
+	int64_t nblocks, bucketsize = 32, blocksize = 8;
 	int fd, i, c;
 	struct cache_sb sb;
 
@@ -100,6 +100,7 @@ int main(int argc, char **argv)
 		exit(EXIT_FAILURE);
 	}
 	nblocks = getblocks(fd);
+	printf("device is %li sectors\n", nblocks);
 
 	if (bucketsize < blocksize ||
 	    bucketsize > nblocks / 8) {
@@ -114,8 +115,7 @@ int main(int argc, char **argv)
 	sb.nbuckets = nblocks / sb.bucket_size;
 
 	do
-		sb.first_bucket = ((--sb.nbuckets * sizeof(struct bucket_disk))
-				   + 4096 * 3) / (sb.bucket_size * 512) + 1;
+		sb.first_bucket = ((--sb.nbuckets * sizeof(struct bucket_disk)) + (24 << 9)) / (sb.bucket_size << 9) + 1;
 	while ((sb.nbuckets + sb.first_bucket) * sb.bucket_size > nblocks);
 
 	sb.journal_start = sb.first_bucket;
