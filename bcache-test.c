@@ -1,7 +1,6 @@
 #define _XOPEN_SOURCE 500
 #define _GNU_SOURCE
 
-#include <assert.h>
 #include <fcntl.h>
 #include <limits.h>
 #include <linux/fs.h>
@@ -17,6 +16,15 @@
 #include <stdlib.h>
 #include <stdint.h>
 
+#include <openssl/rc4.h>
+#include <openssl/md4.h>
+
+static const unsigned char bcache_magic[] = {
+	0xc6, 0x85, 0x73, 0xf6, 0x4e, 0x1a, 0x45, 0xca,
+	0x82, 0x65, 0xf5, 0x7f, 0x48, 0xba, 0x6d, 0x81 };
+
+unsigned char zero[4096];
+
 #define Pread(fd, buf, size, offset) do {				\
 	int _read = 0, _r;						\
 	while (_read < size) {						\
@@ -24,6 +32,16 @@
 		if (_r <= 0)						\
 			goto err;					\
 		_read += _r;						\
+	}								\
+} while (0)
+
+#define Pwrite(fd, buf, size, offset) do {				\
+	int _write = 0, _r;						\
+	while (_write < size) {						\
+		_r = pwrite(fd, buf, (size) - _write, offset + _write);	\
+		if (_r < 0)						\
+			goto err;					\
+		_write += _r;						\
 	}								\
 } while (0)
 
@@ -52,26 +70,6 @@ double normal()
 	return  x * s;
 }
 
-uint32_t fletcher32(uint16_t *data, size_t len)
-{
-        uint32_t sum1 = 0xffff, sum2 = 0xffff;
- 
-        while (len) {
-                unsigned tlen = len > 360 ? 360 : len;
-                len -= tlen;
-                do {
-                        sum1 += *data++;
-                        sum2 += sum1;
-                } while (--tlen);
-                sum1 = (sum1 & 0xffff) + (sum1 >> 16);
-                sum2 = (sum2 & 0xffff) + (sum2 >> 16);
-        }
-        /* Second reduction step to reduce sums to 16 bits */
-        sum1 = (sum1 & 0xffff) + (sum1 >> 16);
-        sum2 = (sum2 & 0xffff) + (sum2 >> 16);
-        return sum2 << 16 | sum1;
-}
-
 long getblocks(int fd)
 {
 	long ret;
@@ -91,16 +89,14 @@ long getblocks(int fd)
 
 int main(int argc, char **argv)
 {
-	bool walk = false, randsize = false, verbose = false, csum = false;
+	bool walk = false, randsize = false, verbose = false, csum = false, destructive = false;
 	int fd1, fd2 = 0, direct = 0, nbytes = 4096, j;
 	unsigned long size, i, offset = 0;
 	void *buf1 = NULL, *buf2 = NULL;
-	uint32_t *csums = NULL;
+	uint64_t *csums = NULL, *cp, c[2];
 
-	if (argc < 3) {
-		printf("Please enter a cache device and raw device\n");
-		exit(EXIT_FAILURE);
-	}
+	RC4_KEY writedata;
+	RC4_set_key(&writedata, 16, bcache_magic);
 
 	for (i = 1; i < argc; i++) {
 		if (strcmp(argv[i], "direct") == 0)
@@ -112,26 +108,38 @@ int main(int argc, char **argv)
 		else if (strcmp(argv[i], "size") == 0)
 			randsize = true;
 		else if (strcmp(argv[i], "csum") == 0)
-			csum= true;
+			csum = true;
+		else if (strcmp(argv[i], "write") == 0)
+			destructive = true;
 		else
 			break;
 	}
 
-	fd1 = open(argv[i], O_RDONLY|direct);
-	size = getblocks(fd1);
+	if (i + 1 > argc) {
+		printf("Please enter a device to test\n");
+		exit(EXIT_FAILURE);
+	}
 
-	if (!csum) {
-		fd2 = open(argv[2], O_RDONLY|direct);
-		size = MIN(size, getblocks(fd2));
-	} else
-		csums = calloc((size / 8 + 1), sizeof(*csums));
+	if (i + 2 > argc && !csum) {
+		printf("Please enter a device to compare against\n");
+		exit(EXIT_FAILURE);
+	}
+
+	fd1 = open(argv[i], (destructive ? O_RDWR : O_RDONLY)|direct);
+	if (!csum)
+		fd2 = open(argv[i + 1], (destructive ? O_RDWR : O_RDONLY)|direct);
 
 	if (fd1 == -1 || fd2 == -1) {
 		perror("Error opening device");
 		exit(EXIT_FAILURE);
 	}
 
+	size = getblocks(fd1);
+	if (!csum)
+		size = MIN(size, getblocks(fd2));
+
 	size = size / 8 - 16;
+	csums = calloc(size + 16, sizeof(*csums));
 	printf("size %li\n", size);
 
 	if (posix_memalign(&buf1, 4096, 4096 * 16) ||
@@ -142,45 +150,51 @@ int main(int argc, char **argv)
 	setvbuf(stdout, NULL, _IONBF, 0);
 
 	for (i = 0;; i++) {
-		if (randsize)
-			nbytes = 4096 * (int) (drand48() * 16 + 1);
+		bool writing = destructive && (i & 1);
+		nbytes = randsize ? drand48() * 16 + 1 : 1;
+		nbytes <<= 12;
 
 		offset += walk ? normal() * 100 : random();
 		offset %= size;
-		assert(offset < size);
+		offset <<= 12;
 
-		if (verbose)
+		if (verbose || !(i % 100))
 			printf("Loop %li offset %li sectors %i\n",
-			       i, offset << 3, nbytes >> 9);
-		else if (!(i % 100))
-			printf("Loop %li\n", i);
+			       i, offset >> 9, nbytes >> 9);
 
-		Pread(fd1, buf1, nbytes, offset << 12);
+		if (!writing)
+			Pread(fd1, buf1, nbytes, offset);
+		if (!writing && !csum)
+			Pread(fd2, buf2, nbytes, offset);
 
-		if (!csum) {
-			Pread(fd2, buf2, nbytes, offset << 12);
+		for (j = 0; j < nbytes; j += 4096) {
+			if (writing)
+				RC4(&writedata, 4096, zero, buf1 + j);
 
-			for (j = 0; j < nbytes; j += 512)
-				if (memcmp(buf1 + j,
-					   buf2 + j,
-					   512)) {
-					printf("Bad read! loop %li offset %li sectors %i, sector %i\n",
-					       i, offset << 3, nbytes >> 9, j >> 9);
-					exit(EXIT_FAILURE);
-				}
-		} else
-			for (j = 0; j < nbytes / 4096; j++) {
-				int c = fletcher32(buf1 + j * 4096, 4096);
-				if (!csums[offset + j])
-					csums[offset + j] = c;
-				else if (csums[offset + j] != c) {
-					printf("Bad read! loop %li offset %li sectors %i, sector %i\n",
-					       i, offset << 3, nbytes >> 9, j << 3);
-					exit(EXIT_FAILURE);
-				}
-			}
+			if (csum) {
+				MD4(buf1 + j, 4096, (void*) c);
+				cp = csums + (offset + j) / 4096;
+
+				if (writing || !*cp)
+					*cp = c[0];
+				else if (*cp != c[0])
+					goto bad;
+			} else if (!writing &&
+				   memcmp(buf1 + j,
+					  buf2 + j,
+					  4096))
+				goto bad;
+		}
+		if (writing)
+			Pwrite(fd1, buf1, nbytes, offset);
+		if (writing && !csum)
+			Pwrite(fd2, buf2, nbytes, offset);
 	}
 err:
-	perror("Read error");
+	perror("IO error");
+	exit(EXIT_FAILURE);
+bad:
+	printf("Bad read! loop %li offset %li sectors %i, sector %i\n",
+	       i, offset >> 9, nbytes >> 9, j >> 9);
 	exit(EXIT_FAILURE);
 }
