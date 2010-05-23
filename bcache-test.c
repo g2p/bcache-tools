@@ -87,13 +87,19 @@ long getblocks(int fd)
 	return ret;
 }
 
+struct pagestuff {
+	unsigned char csum[16];
+	int readcount;
+	int writecount;
+};
+
 int main(int argc, char **argv)
 {
 	bool walk = false, randsize = false, verbose = false, csum = false, destructive = false;
 	int fd1, fd2 = 0, direct = 0, nbytes = 4096, j;
-	unsigned long size, i, offset = 0;
+	unsigned long size, i, offset = 0, done = 0;
 	void *buf1 = NULL, *buf2 = NULL;
-	uint64_t *csums = NULL, *cp, c[2];
+	struct pagestuff *pages, *p;
 
 	RC4_KEY writedata;
 	RC4_set_key(&writedata, 16, bcache_magic);
@@ -139,7 +145,7 @@ int main(int argc, char **argv)
 		size = MIN(size, getblocks(fd2));
 
 	size = size / 8 - 16;
-	csums = calloc(size + 16, sizeof(*csums));
+	pages = calloc(size + 16, sizeof(*pages));
 	printf("size %li\n", size);
 
 	if (posix_memalign(&buf1, 4096, 4096 * 16) ||
@@ -147,20 +153,21 @@ int main(int argc, char **argv)
 		printf("Could not allocate buffers\n");
 		exit(EXIT_FAILURE);
 	}
-	setvbuf(stdout, NULL, _IONBF, 0);
+	//setvbuf(stdout, NULL, _IONBF, 0);
 
 	for (i = 0;; i++) {
 		bool writing = destructive && (i & 1);
 		nbytes = randsize ? drand48() * 16 + 1 : 1;
 		nbytes <<= 12;
 
-		offset += walk ? normal() * 100 : random();
+		offset += walk ? normal() * 10 : random();
 		offset %= size;
 		offset <<= 12;
 
 		if (verbose || !(i % 100))
-			printf("Loop %li offset %li sectors %i\n",
-			       i, offset >> 9, nbytes >> 9);
+			printf("Loop %6li offset %9li sectors %3i, %6lu mb done\n",
+			       i, offset >> 9, nbytes >> 9, done >> 11);
+		done += nbytes >> 9;
 
 		if (!writing)
 			Pread(fd1, buf1, nbytes, offset);
@@ -168,22 +175,27 @@ int main(int argc, char **argv)
 			Pread(fd2, buf2, nbytes, offset);
 
 		for (j = 0; j < nbytes; j += 4096) {
+			p = &pages[(offset + j) / 4096];
+
 			if (writing)
 				RC4(&writedata, 4096, zero, buf1 + j);
 
 			if (csum) {
-				MD4(buf1 + j, 4096, (void*) c);
-				cp = csums + (offset + j) / 4096;
+				unsigned char c[16];
+				MD4(buf1 + j, 4096, &c[0]);
 
-				if (writing || !*cp)
-					*cp = c[0];
-				else if (*cp != c[0])
+				if (writing ||
+				    (!p->readcount && !p->writecount))
+					memcpy(&p->csum[0], c, 16);
+				else if (memcmp(&p->csum[0], c, 16))
 					goto bad;
 			} else if (!writing &&
 				   memcmp(buf1 + j,
 					  buf2 + j,
 					  4096))
 				goto bad;
+
+			writing ? p->writecount++ : p->readcount++;
 		}
 		if (writing)
 			Pwrite(fd1, buf1, nbytes, offset);
@@ -194,7 +206,7 @@ err:
 	perror("IO error");
 	exit(EXIT_FAILURE);
 bad:
-	printf("Bad read! loop %li offset %li sectors %i, sector %i\n",
-	       i, offset >> 9, nbytes >> 9, j >> 9);
+	printf("Bad read! loop %li offset %li sectors %i, sector %i, readcount %i writecount %i\n",
+	       i, offset >> 9, nbytes >> 9, j >> 9, p->readcount, p->writecount);
 	exit(EXIT_FAILURE);
 }
