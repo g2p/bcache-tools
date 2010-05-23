@@ -89,6 +89,7 @@ long getblocks(int fd)
 
 struct pagestuff {
 	unsigned char csum[16];
+	unsigned char oldcsum[16];
 	int readcount;
 	int writecount;
 };
@@ -100,6 +101,7 @@ int main(int argc, char **argv)
 	unsigned long size, i, offset = 0, done = 0;
 	void *buf1 = NULL, *buf2 = NULL;
 	struct pagestuff *pages, *p;
+	unsigned char c[16];
 
 	RC4_KEY writedata;
 	RC4_set_key(&writedata, 16, bcache_magic);
@@ -181,13 +183,13 @@ int main(int argc, char **argv)
 				RC4(&writedata, 4096, zero, buf1 + j);
 
 			if (csum) {
-				unsigned char c[16];
 				MD4(buf1 + j, 4096, &c[0]);
 
 				if (writing ||
-				    (!p->readcount && !p->writecount))
+				    (!p->readcount && !p->writecount)) {
+					memcpy(&p->oldcsum[0], &p->csum[0], 16);
 					memcpy(&p->csum[0], c, 16);
-				else if (memcmp(&p->csum[0], c, 16))
+				} else if (memcmp(&p->csum[0], c, 16))
 					goto bad;
 			} else if (!writing &&
 				   memcmp(buf1 + j,
@@ -208,5 +210,9 @@ err:
 bad:
 	printf("Bad read! loop %li offset %li sectors %i, sector %i, readcount %i writecount %i\n",
 	       i, offset >> 9, nbytes >> 9, j >> 9, p->readcount, p->writecount);
+
+	if (!memcmp(&p->oldcsum[0], c, 16))
+		printf("Matches previous csum\n");
+
 	exit(EXIT_FAILURE);
 }
