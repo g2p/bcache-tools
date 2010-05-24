@@ -162,7 +162,8 @@ int main(int argc, char **argv)
 		nbytes = randsize ? drand48() * 16 + 1 : 1;
 		nbytes <<= 12;
 
-		offset += walk ? normal() * 10 : random();
+		offset >>= 12;
+		offset += walk ? normal() * 64 : random();
 		offset %= size;
 		offset <<= 12;
 
