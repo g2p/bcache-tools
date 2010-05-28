@@ -102,6 +102,9 @@ int main(int argc, char **argv)
 	void *buf1 = NULL, *buf2 = NULL;
 	struct pagestuff *pages, *p;
 	unsigned char c[16];
+	char *test;
+
+	printf("strchr: %p\n", strchr);
 
 	RC4_KEY writedata;
 	RC4_set_key(&writedata, 16, bcache_magic);
@@ -132,6 +135,8 @@ int main(int argc, char **argv)
 		printf("Please enter a device to compare against\n");
 		exit(EXIT_FAILURE);
 	}
+
+	test = strchr(argv[i], ':');
 
 	fd1 = open(argv[i], (destructive ? O_RDWR : O_RDONLY)|direct);
 	if (!csum)
