@@ -15,6 +15,7 @@
 #include <sys/stat.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include <time.h>
 
 #include <openssl/rc4.h>
 #include <openssl/md4.h>
@@ -103,6 +104,7 @@ int main(int argc, char **argv)
 	struct pagestuff *pages, *p;
 	unsigned char c[16];
 	char *test;
+	time_t last_printed = 0;
 
 	printf("strchr: %p\n", strchr);
 
@@ -168,13 +170,20 @@ int main(int argc, char **argv)
 		nbytes <<= 12;
 
 		offset >>= 12;
-		offset += walk ? normal() * 64 : random();
+		offset += walk ? normal() * 20 : random();
 		offset %= size;
 		offset <<= 12;
 
-		if (verbose || !(i % 100))
-			printf("Loop %6li offset %9li sectors %3i, %6lu mb done\n",
+		if (!verbose) {
+			time_t now = time(NULL);
+			if (now - last_printed >= 5) {
+				last_printed = now;
+				goto print;
+			}
+		} else
+print:			printf("Loop %6li offset %9li sectors %3i, %6lu mb done\n",
 			       i, offset >> 9, nbytes >> 9, done >> 11);
+
 		done += nbytes >> 9;
 
 		if (!writing)
