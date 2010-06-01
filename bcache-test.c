@@ -218,8 +218,8 @@ err:
 	perror("IO error");
 	exit(EXIT_FAILURE);
 bad:
-	printf("Bad read! loop %li offset %li sectors %i, sector %i, readcount %i writecount %i\n",
-	       i, offset >> 9, nbytes >> 9, j >> 9, p->readcount, p->writecount);
+	printf("Bad read! loop %li offset %li readcount %i writecount %i\n",
+	       i, (offset + j) >> 9, p->readcount, p->writecount);
 
 	if (!memcmp(&p->oldcsum[0], c, 16))
 		printf("Matches previous csum\n");
