@@ -10,6 +10,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <sys/ioctl.h>
+#include <sys/klog.h>
 #include <sys/param.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -95,14 +96,33 @@ struct pagestuff {
 	int writecount;
 };
 
+void flushlog(int fd, char *logbuf)
+{
+	int w = 0, len = klogctl(4, logbuf, 1 << 21);
+	if (len == -1) {
+		perror("Error reading kernel log");
+		exit(EXIT_FAILURE);
+	}
+
+	while (w < len) {
+		int r = write(fd, logbuf + w, len - w);
+		if (r == -1) {
+			perror("Error writing log");
+			exit(EXIT_FAILURE);
+		}
+		w += r;
+	}
+}
+
 int main(int argc, char **argv)
 {
-	bool walk = false, randsize = false, verbose = false, csum = false, destructive = false;
-	int fd1, fd2 = 0, direct = 0, nbytes = 4096, j;
+	bool walk = false, randsize = false, verbose = false, csum = false, destructive = false, log = false;
+	int fd1, fd2 = 0, logfd, direct = 0, nbytes = 4096, j;
 	unsigned long size, i, offset = 0, done = 0;
 	void *buf1 = NULL, *buf2 = NULL;
 	struct pagestuff *pages, *p;
 	unsigned char c[16];
+	char logbuf[1 << 21];
 	time_t last_printed = 0;
 
 	RC4_KEY writedata;
@@ -121,6 +141,8 @@ int main(int argc, char **argv)
 			csum = true;
 		else if (strcmp(argv[i], "write") == 0)
 			destructive = true;
+		else if (strcmp(argv[i], "log") == 0)
+			log = true;
 		else
 			break;
 	}
@@ -158,6 +180,15 @@ int main(int argc, char **argv)
 		exit(EXIT_FAILURE);
 	}
 	//setvbuf(stdout, NULL, _IONBF, 0);
+	
+	if (log) {
+		logfd = open("log", O_WRONLY|O_CREAT|O_TRUNC, 0644);
+		if (logfd == -1) {
+			perror("Error opening log file");
+			exit(EXIT_FAILURE);
+		}
+		klogctl(8, 0, 6);
+	}
 
 	for (i = 0;; i++) {
 		bool writing = destructive && (i & 1);
@@ -168,6 +199,9 @@ int main(int argc, char **argv)
 		offset += walk ? normal() * 20 : random();
 		offset %= size;
 		offset <<= 12;
+
+		if (log && !(i % 200))
+			flushlog(logfd, logbuf);
 
 		if (!verbose) {
 			time_t now = time(NULL);
@@ -216,6 +250,7 @@ print:			printf("Loop %6li offset %9li sectors %3i, %6lu mb done\n",
 	}
 err:
 	perror("IO error");
+	flushlog(logfd, logbuf);
 	exit(EXIT_FAILURE);
 bad:
 	printf("Bad read! loop %li offset %li readcount %i writecount %i\n",
@@ -224,5 +259,6 @@ bad:
 	if (!memcmp(&p->oldcsum[0], c, 16))
 		printf("Matches previous csum\n");
 
+	flushlog(logfd, logbuf);
 	exit(EXIT_FAILURE);
 }
