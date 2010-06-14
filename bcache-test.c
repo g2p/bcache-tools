@@ -114,6 +114,11 @@ void flushlog(int fd, char *logbuf)
 	}
 }
 
+void aio_loop(int nr)
+{
+
+}
+
 int main(int argc, char **argv)
 {
 	bool walk = false, randsize = false, verbose = false, csum = false, destructive = false, log = false;
@@ -182,7 +187,8 @@ int main(int argc, char **argv)
 	//setvbuf(stdout, NULL, _IONBF, 0);
 	
 	if (log) {
-		logfd = open("log", O_WRONLY|O_CREAT|O_TRUNC, 0644);
+		sprintf(logbuf, "log.%i", abs(random()) % 1000);
+		logfd = open(logbuf, O_WRONLY|O_CREAT|O_TRUNC, 0644);
 		if (logfd == -1) {
 			perror("Error opening log file");
 			exit(EXIT_FAILURE);
@@ -250,7 +256,8 @@ print:			printf("Loop %6li offset %9li sectors %3i, %6lu mb done\n",
 	}
 err:
 	perror("IO error");
-	flushlog(logfd, logbuf);
+	if (log)
+		flushlog(logfd, logbuf);
 	exit(EXIT_FAILURE);
 bad:
 	printf("Bad read! loop %li offset %li readcount %i writecount %i\n",
