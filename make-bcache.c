@@ -143,6 +143,7 @@ int main(int argc, char **argv)
 	if (pwrite(fd, &sb, sizeof(sb), 4096) != sizeof(sb))
 		goto err;
 
+	fsync(fd);
 	exit(EXIT_SUCCESS);
 err:
 	perror("write error\n");
