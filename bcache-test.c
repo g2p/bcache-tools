@@ -120,52 +120,72 @@ void aio_loop(int nr)
 
 }
 
+void usage()
+{
+	exit(EXIT_FAILURE);
+}
+
 int main(int argc, char **argv)
 {
 	bool walk = false, randsize = false, verbose = false, csum = false, destructive = false, log = false;
-	int fd1, fd2 = 0, logfd, direct = 0, nbytes = 4096, j;
-	unsigned long size, i, offset = 0, done = 0, unique = 0;
+	int fd1, fd2 = 0, logfd, direct = 0, nbytes = 4096, j, o;
+	unsigned long size, i, offset = 0, done = 0, unique = 0, benchmark = 0;
 	void *buf1 = NULL, *buf2 = NULL;
 	struct pagestuff *pages, *p;
 	unsigned char c[16];
 	char logbuf[1 << 21];
 	time_t last_printed = 0;
+	extern char *optarg;
 
 	RC4_KEY writedata;
 	RC4_set_key(&writedata, 16, bcache_magic);
 
-	for (i = 1; i < argc; i++) {
-		if (strcmp(argv[i], "direct") == 0)
+	while ((o = getopt(argc, argv, "dwvscwlb:")) != EOF)
+		switch (o) {
+		case 'd':
 			direct = O_DIRECT;
-		else if (strcmp(argv[i], "walk") == 0)
-			walk = true;
-		else if (strcmp(argv[i], "verbose") == 0)
-			verbose = true;
-		else if (strcmp(argv[i], "size") == 0)
-			randsize = true;
-		else if (strcmp(argv[i], "csum") == 0)
-			csum = true;
-		else if (strcmp(argv[i], "write") == 0)
-			destructive = true;
-		else if (strcmp(argv[i], "log") == 0)
-			log = true;
-		else
 			break;
-	}
+		case 'n':
+			walk = true;
+			break;
+		case 'v':
+			verbose = true;
+			break;
+		case 's':
+			randsize = true;
+			break;
+		case 'c':
+			csum = true;
+			break;
+		case 'w':
+			destructive = true;
+			break;
+		case 'l':
+			log = true;
+			break;
+		case 'b':
+			benchmark = atol(optarg);
+			break;
+		default:
+			usage();
+		}
 
-	if (i + 1 > argc) {
+	argv += optind;
+	argc -= optind;
+
+	if (argc < 1) {
 		printf("Please enter a device to test\n");
 		exit(EXIT_FAILURE);
 	}
 
-	if (i + 2 > argc && !csum) {
+	if (!csum && !benchmark && argc < 2) {
 		printf("Please enter a device to compare against\n");
 		exit(EXIT_FAILURE);
 	}
 
-	fd1 = open(argv[i], (destructive ? O_RDWR : O_RDONLY)|direct);
-	if (!csum)
-		fd2 = open(argv[i + 1], (destructive ? O_RDWR : O_RDONLY)|direct);
+	fd1 = open(argv[0], (destructive ? O_RDWR : O_RDONLY)|direct);
+	if (!csum && !benchmark)
+		fd2 = open(argv[1], (destructive ? O_RDWR : O_RDONLY)|direct);
 
 	if (fd1 == -1 || fd2 == -1) {
 		perror("Error opening device");
@@ -173,7 +193,7 @@ int main(int argc, char **argv)
 	}
 
 	size = getblocks(fd1);
-	if (!csum)
+	if (!csum && !benchmark)
 		size = MIN(size, getblocks(fd2));
 
 	size = size / 8 - 16;
@@ -197,7 +217,7 @@ int main(int argc, char **argv)
 		klogctl(8, 0, 6);
 	}
 
-	for (i = 0;; i++) {
+	for (i = 0; !benchmark || i < benchmark; i++) {
 		bool writing = destructive && (i & 1);
 		nbytes = randsize ? drand48() * 16 + 1 : 1;
 		nbytes <<= 12;
@@ -224,7 +244,7 @@ print:			printf("Loop %6li offset %9li sectors %3i, %6lu mb done, %6lu mb unique
 
 		if (!writing)
 			Pread(fd1, buf1, nbytes, offset);
-		if (!writing && !csum)
+		if (!writing && !csum && !benchmark)
 			Pread(fd2, buf2, nbytes, offset);
 
 		for (j = 0; j < nbytes; j += 4096) {
@@ -242,7 +262,7 @@ print:			printf("Loop %6li offset %9li sectors %3i, %6lu mb done, %6lu mb unique
 					memcpy(&p->csum[0], c, 16);
 				} else if (memcmp(&p->csum[0], c, 16))
 					goto bad;
-			} else if (!writing &&
+			} else if (!writing && !benchmark &&
 				   memcmp(buf1 + j,
 					  buf2 + j,
 					  4096))
@@ -255,9 +275,10 @@ print:			printf("Loop %6li offset %9li sectors %3i, %6lu mb done, %6lu mb unique
 		}
 		if (writing)
 			Pwrite(fd1, buf1, nbytes, offset);
-		if (writing && !csum)
+		if (writing && !csum && !benchmark)
 			Pwrite(fd2, buf2, nbytes, offset);
 	}
+	exit(EXIT_SUCCESS);
 err:
 	perror("IO error");
 	if (log)
