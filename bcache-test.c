@@ -1,3 +1,4 @@
+#define _FILE_OFFSET_BITS	64
 #define _XOPEN_SOURCE 500
 #define _GNU_SOURCE
 
@@ -123,7 +124,7 @@ int main(int argc, char **argv)
 {
 	bool walk = false, randsize = false, verbose = false, csum = false, destructive = false, log = false;
 	int fd1, fd2 = 0, logfd, direct = 0, nbytes = 4096, j;
-	unsigned long size, i, offset = 0, done = 0;
+	unsigned long size, i, offset = 0, done = 0, unique = 0;
 	void *buf1 = NULL, *buf2 = NULL;
 	struct pagestuff *pages, *p;
 	unsigned char c[16];
@@ -216,8 +217,8 @@ int main(int argc, char **argv)
 				goto print;
 			}
 		} else
-print:			printf("Loop %6li offset %9li sectors %3i, %6lu mb done\n",
-			       i, offset >> 9, nbytes >> 9, done >> 11);
+print:			printf("Loop %6li offset %9li sectors %3i, %6lu mb done, %6lu mb unique\n",
+			       i, offset >> 9, nbytes >> 9, done >> 11, unique >> 11);
 
 		done += nbytes >> 9;
 
@@ -246,6 +247,9 @@ print:			printf("Loop %6li offset %9li sectors %3i, %6lu mb done\n",
 					  buf2 + j,
 					  4096))
 				goto bad;
+
+			if (!p->writecount && !p->readcount)
+				unique += 8;
 
 			writing ? p->writecount++ : p->readcount++;
 		}
