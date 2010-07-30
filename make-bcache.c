@@ -8,7 +8,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
 #include <sys/ioctl.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -75,19 +74,24 @@ long hatoi(const char *s)
 	return i;
 }
 
+void usage()
+{
+	printf("");
+	exit(EXIT_FAILURE);
+}
+
 int main(int argc, char **argv)
 {
 	int64_t nblocks, bucketsize = 32, blocksize = 8;
 	int fd, i, c;
 	struct cache_sb sb;
 
-	while ((c = getopt(argc, argv, "b:")) != -1) {
+	while ((c = getopt(argc, argv, "b:")) != -1)
 		switch (c) {
 		case 'b':
 			bucketsize = hatoi(optarg) / 512;
 			break;
 		}
-	}
 
 	if (argc <= optind) {
 		printf("Please supply a device\n");

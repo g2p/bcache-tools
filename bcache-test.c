@@ -28,6 +28,8 @@ static const unsigned char bcache_magic[] = {
 
 unsigned char zero[4096];
 
+bool klog = false;
+
 #define Pread(fd, buf, size, offset) do {				\
 	int _read = 0, _r;						\
 	while (_read < size) {						\
@@ -97,9 +99,29 @@ struct pagestuff {
 	int writecount;
 };
 
-void flushlog(int fd, char *logbuf)
+void flushlog(void)
 {
-	int w = 0, len = klogctl(4, logbuf, 1 << 21);
+	char logbuf[1 << 21];
+	int w = 0, len;
+	static int fd;
+
+	if (!klog)
+		return;
+
+	if (!fd) {
+		klogctl(8, 0, 6);
+
+		sprintf(logbuf, "log.%i", abs(random()) % 1000);
+		fd = open(logbuf, O_WRONLY|O_CREAT|O_TRUNC, 0644);
+
+		if (fd == -1) {
+			perror("Error opening log file");
+			exit(EXIT_FAILURE);
+		}
+	}
+
+	len = klogctl(4, logbuf, 1 << 21);
+
 	if (len == -1) {
 		perror("Error reading kernel log");
 		exit(EXIT_FAILURE);
@@ -127,20 +149,19 @@ void usage()
 
 int main(int argc, char **argv)
 {
-	bool walk = false, randsize = false, verbose = false, csum = false, destructive = false, log = false;
-	int fd1, fd2 = 0, logfd, direct = 0, nbytes = 4096, j, o;
+	bool walk = false, randsize = false, verbose = false, csum = false, destructive = false;
+	int fd1, fd2 = 0, direct = 0, nbytes = 4096, j, o;
 	unsigned long size, i, offset = 0, done = 0, unique = 0, benchmark = 0;
 	void *buf1 = NULL, *buf2 = NULL;
 	struct pagestuff *pages, *p;
 	unsigned char c[16];
-	char logbuf[1 << 21];
 	time_t last_printed = 0;
 	extern char *optarg;
 
 	RC4_KEY writedata;
 	RC4_set_key(&writedata, 16, bcache_magic);
 
-	while ((o = getopt(argc, argv, "dwvscwlb:")) != EOF)
+	while ((o = getopt(argc, argv, "dnwvscwlb:")) != EOF)
 		switch (o) {
 		case 'd':
 			direct = O_DIRECT;
@@ -161,7 +182,7 @@ int main(int argc, char **argv)
 			destructive = true;
 			break;
 		case 'l':
-			log = true;
+			klog = true;
 			break;
 		case 'b':
 			benchmark = atol(optarg);
@@ -207,16 +228,6 @@ int main(int argc, char **argv)
 	}
 	//setvbuf(stdout, NULL, _IONBF, 0);
 	
-	if (log) {
-		sprintf(logbuf, "log.%i", abs(random()) % 1000);
-		logfd = open(logbuf, O_WRONLY|O_CREAT|O_TRUNC, 0644);
-		if (logfd == -1) {
-			perror("Error opening log file");
-			exit(EXIT_FAILURE);
-		}
-		klogctl(8, 0, 6);
-	}
-
 	for (i = 0; !benchmark || i < benchmark; i++) {
 		bool writing = destructive && (i & 1);
 		nbytes = randsize ? drand48() * 16 + 1 : 1;
@@ -227,8 +238,8 @@ int main(int argc, char **argv)
 		offset %= size;
 		offset <<= 12;
 
-		if (log && !(i % 200))
-			flushlog(logfd, logbuf);
+		if (!(i % 200))
+			flushlog();
 
 		if (!verbose) {
 			time_t now = time(NULL);
@@ -278,11 +289,12 @@ print:			printf("Loop %6li offset %9li sectors %3i, %6lu mb done, %6lu mb unique
 		if (writing && !csum && !benchmark)
 			Pwrite(fd2, buf2, nbytes, offset);
 	}
+	printf("Loop %6li offset %9li sectors %3i, %6lu mb done, %6lu mb unique\n",
+	       i, offset >> 9, nbytes >> 9, done >> 11, unique >> 11);
 	exit(EXIT_SUCCESS);
 err:
 	perror("IO error");
-	if (log)
-		flushlog(logfd, logbuf);
+	flushlog();
 	exit(EXIT_FAILURE);
 bad:
 	printf("Bad read! loop %li offset %li readcount %i writecount %i\n",
@@ -291,6 +303,6 @@ bad:
 	if (!memcmp(&p->oldcsum[0], c, 16))
 		printf("Matches previous csum\n");
 
-	flushlog(logfd, logbuf);
+	flushlog();
 	exit(EXIT_FAILURE);
 }
