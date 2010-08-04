@@ -149,7 +149,7 @@ void usage()
 
 int main(int argc, char **argv)
 {
-	bool walk = false, randsize = false, verbose = false, csum = false, destructive = false;
+	bool walk = false, randsize = false, verbose = false, csum = false, rtest = false, wtest = false;
 	int fd1, fd2 = 0, direct = 0, nbytes = 4096, j, o;
 	unsigned long size, i, offset = 0, done = 0, unique = 0, benchmark = 0;
 	void *buf1 = NULL, *buf2 = NULL;
@@ -179,7 +179,10 @@ int main(int argc, char **argv)
 			csum = true;
 			break;
 		case 'w':
-			destructive = true;
+			wtest = true;
+			break;
+		case 'r':
+			rtest = true;
 			break;
 		case 'l':
 			klog = true;
@@ -194,6 +197,9 @@ int main(int argc, char **argv)
 	argv += optind;
 	argc -= optind;
 
+	if (!rtest && !wtest)
+		rtest = true;
+
 	if (argc < 1) {
 		printf("Please enter a device to test\n");
 		exit(EXIT_FAILURE);
@@ -204,9 +210,9 @@ int main(int argc, char **argv)
 		exit(EXIT_FAILURE);
 	}
 
-	fd1 = open(argv[0], (destructive ? O_RDWR : O_RDONLY)|direct);
+	fd1 = open(argv[0], (wtest ? O_RDWR : O_RDONLY)|direct);
 	if (!csum && !benchmark)
-		fd2 = open(argv[1], (destructive ? O_RDWR : O_RDONLY)|direct);
+		fd2 = open(argv[1], (wtest ? O_RDWR : O_RDONLY)|direct);
 
 	if (fd1 == -1 || fd2 == -1) {
 		perror("Error opening device");
@@ -229,7 +235,7 @@ int main(int argc, char **argv)
 	//setvbuf(stdout, NULL, _IONBF, 0);
 	
 	for (i = 0; !benchmark || i < benchmark; i++) {
-		bool writing = destructive && (i & 1);
+		bool writing = (wtest && (i & 1)) || !rtest;
 		nbytes = randsize ? drand48() * 16 + 1 : 1;
 		nbytes <<= 12;
 
