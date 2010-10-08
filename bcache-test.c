@@ -62,7 +62,7 @@ double normal()
 		n = 0 / (double) 0;
 		return x;
 	}
-	
+
 	do {
 		x = random() / (double) (RAND_MAX / 2) - 1;
 		y = random() / (double) (RAND_MAX / 2) - 1;
@@ -233,7 +233,7 @@ int main(int argc, char **argv)
 		exit(EXIT_FAILURE);
 	}
 	//setvbuf(stdout, NULL, _IONBF, 0);
-	
+
 	for (i = 0; !benchmark || i < benchmark; i++) {
 		bool writing = (wtest && (i & 1)) || !rtest;
 		nbytes = randsize ? drand48() * 16 + 1 : 1;

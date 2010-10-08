@@ -12,27 +12,9 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#include <uuid/uuid.h>
 
-static const char bcache_magic[] = {
-	0xc6, 0x85, 0x73, 0xf6, 0x4e, 0x1a, 0x45, 0xca,
-	0x82, 0x65, 0xf5, 0x7f, 0x48, 0xba, 0x6d, 0x81 };
-
-struct cache_sb {
-	uint8_t  magic[16];
-	uint32_t version;
-	uint16_t block_size;		/* sectors */
-	uint16_t bucket_size;		/* sectors */
-	uint32_t journal_start;		/* buckets */
-	uint32_t first_bucket;		/* start of data */
-	uint64_t nbuckets;		/* device size */
-	uint64_t btree_root;
-	uint16_t btree_level;
-};
-
-struct bucket_disk {
-	uint16_t	priority;
-	uint8_t		generation;
-} __attribute((packed));
+#include "bcache.h"
 
 char zero[4096];
 
@@ -85,11 +67,20 @@ int main(int argc, char **argv)
 	int64_t nblocks, bucketsize = 32, blocksize = 8;
 	int fd, i, c;
 	struct cache_sb sb;
+	char uuid[40];
 
-	while ((c = getopt(argc, argv, "b:")) != -1)
+	uuid_generate(sb.uuid);
+
+	while ((c = getopt(argc, argv, "U:b:")) != -1)
 		switch (c) {
 		case 'b':
 			bucketsize = hatoi(optarg) / 512;
+			break;
+		case 'U':
+			if (uuid_parse(optarg, sb.uuid)) {
+				printf("Bad uuid\n");
+				exit(EXIT_FAILURE);
+			}
 			break;
 		}
 
@@ -117,6 +108,7 @@ int main(int argc, char **argv)
 	sb.block_size = blocksize;
 	sb.bucket_size = bucketsize;
 	sb.nbuckets = nblocks / sb.bucket_size;
+	uuid_unparse(sb.uuid, uuid);
 
 	do
 		sb.first_bucket = ((--sb.nbuckets * sizeof(struct bucket_disk)) + (24 << 9)) / (sb.bucket_size << 9) + 1;
@@ -131,12 +123,14 @@ int main(int argc, char **argv)
 	       "bucket_size:		%u\n"
 	       "journal_start:		%u\n"
 	       "first_bucket:		%u\n"
-	       "nbuckets:		%ju\n",
+	       "nbuckets:		%ju\n"
+	       "UUID:			%s\n",
 	       sb.block_size,
 	       sb.bucket_size,
 	       sb.journal_start,
 	       sb.first_bucket,
-	       sb.nbuckets);
+	       sb.nbuckets,
+	       uuid);
 
 	/* Zero out priorities */
 	lseek(fd, 4096, SEEK_SET);
