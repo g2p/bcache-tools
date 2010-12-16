@@ -7,8 +7,9 @@ static const char bcache_magic[] = {
 
 struct cache_sb {
 	uint8_t		magic[16];
-#define CACHE_CLEAN	1
-#define CACHE_SYNC	2
+#define CACHE_CLEAN		1
+#define CACHE_SYNC		2
+#define CACHE_BACKING_DEVICE	4
 	uint32_t	version;
 	uint16_t	block_size;	/* sectors */
 	uint16_t	bucket_size;	/* sectors */

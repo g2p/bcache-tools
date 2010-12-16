@@ -4,6 +4,7 @@
 
 #include <fcntl.h>
 #include <linux/fs.h>
+#include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -58,21 +59,32 @@ long hatoi(const char *s)
 
 void usage()
 {
-	printf("");
+	printf("Usage: make-bcache [options] device\n"
+	       "	-C Format a cache device\n"
+	       "	-B Format a backing device\n"
+	       "	-b bucket size\n"
+	       "	-U UUID\n");
 	exit(EXIT_FAILURE);
 }
 
 int main(int argc, char **argv)
 {
-	int64_t nblocks, bucketsize = 32, blocksize = 8;
+	bool cache = false, backingdev = false;
+	int64_t nblocks, bucketsize = 0, blocksize = 8;
 	int fd, i, c;
 	struct cache_sb sb;
 	char uuid[40];
 
 	uuid_generate(sb.uuid);
 
-	while ((c = getopt(argc, argv, "U:b:")) != -1)
+	while ((c = getopt(argc, argv, "CBU:b:")) != -1)
 		switch (c) {
+		case 'C':
+			cache = true;
+			break;
+		case 'B':
+			backingdev = true;
+			break;
 		case 'b':
 			bucketsize = hatoi(optarg) / 512;
 			break;
@@ -83,6 +95,14 @@ int main(int argc, char **argv)
 			}
 			break;
 		}
+
+	if (!bucketsize)
+		bucketsize = cache ? 256 : 8192;
+
+	if (cache == backingdev) {
+		printf("Must specify one of -C or -B\n");
+		exit(EXIT_FAILURE);
+	}
 
 	if (argc <= optind) {
 		printf("Please supply a device\n");
@@ -104,7 +124,7 @@ int main(int argc, char **argv)
 	}
 
 	memcpy(sb.magic, bcache_magic, 16);
-	sb.version = 0;
+	sb.version = backingdev ? CACHE_BACKING_DEVICE : 0;
 	sb.block_size = blocksize;
 	sb.bucket_size = bucketsize;
 	sb.nbuckets = nblocks / sb.bucket_size;
