@@ -13,8 +13,8 @@ install: make-bcache probe-bcache
 #	install -m0755 bcache-test ${PREFIX}/sbin/
 
 clean:
-	rm -f make-bcache bcache-test *.o
+	rm -f make-bcache probe-bcache bcache-test *.o
 
-bcache-test: LDFLAGS += -lm -lssl -lcrypto
-make-bcache: LDFLAGS += -luuid
-probe-bcache: LDFLAGS += -luuid
+bcache-test: LDLIBS += -lm -lssl -lcrypto
+make-bcache: LDLIBS += -luuid
+probe-bcache: LDLIBS += -luuid

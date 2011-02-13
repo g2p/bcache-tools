@@ -70,14 +70,14 @@ void usage()
 int main(int argc, char **argv)
 {
 	bool cache = false, backingdev = false;
-	int64_t nblocks, bucketsize = 0, blocksize = 8;
+	int64_t nblocks;
 	int fd, i, c;
-	struct cache_sb sb;
 	char uuid[40];
+	struct cache_sb sb = { .block_size = 8, .bucket_size = 0 };
 
 	uuid_generate(sb.uuid);
 
-	while ((c = getopt(argc, argv, "CBU:b:")) != -1)
+	while ((c = getopt(argc, argv, "CBU:w:b:")) != -1)
 		switch (c) {
 		case 'C':
 			cache = true;
@@ -86,7 +86,10 @@ int main(int argc, char **argv)
 			backingdev = true;
 			break;
 		case 'b':
-			bucketsize = hatoi(optarg) / 512;
+			sb.bucket_size = hatoi(optarg) / 512;
+			break;
+		case 'w':
+			sb.block_size = hatoi(optarg) / 512;
 			break;
 		case 'U':
 			if (uuid_parse(optarg, sb.uuid)) {
@@ -96,8 +99,8 @@ int main(int argc, char **argv)
 			break;
 		}
 
-	if (!bucketsize)
-		bucketsize = cache ? 256 : 8192;
+	if (!sb.bucket_size)
+		sb.bucket_size = cache ? 256 : 8192;
 
 	if (cache == backingdev) {
 		printf("Must specify one of -C or -B\n");
@@ -117,16 +120,14 @@ int main(int argc, char **argv)
 	nblocks = getblocks(fd);
 	printf("device is %li sectors\n", nblocks);
 
-	if (bucketsize < blocksize ||
-	    bucketsize > nblocks / 8) {
-		printf("Bad bucket size %li\n", bucketsize);
+	if (sb.bucket_size < sb.block_size ||
+	    sb.bucket_size > nblocks / 8) {
+		printf("Bad bucket size %i\n", sb.bucket_size);
 		exit(EXIT_FAILURE);
 	}
 
 	memcpy(sb.magic, bcache_magic, 16);
 	sb.version = backingdev ? CACHE_BACKING_DEVICE : 0;
-	sb.block_size = blocksize;
-	sb.bucket_size = bucketsize;
 	sb.nbuckets = nblocks / sb.bucket_size;
 	uuid_unparse(sb.uuid, uuid);
 
