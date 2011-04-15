@@ -76,6 +76,7 @@ int main(int argc, char **argv)
 	struct cache_sb sb = { .block_size = 8, .bucket_size = 0 };
 
 	uuid_generate(sb.uuid);
+	uuid_generate(sb.set_uuid);
 
 	while ((c = getopt(argc, argv, "CBU:w:b:")) != -1)
 		switch (c) {
@@ -129,6 +130,7 @@ int main(int argc, char **argv)
 	memcpy(sb.magic, bcache_magic, 16);
 	sb.version = backingdev ? CACHE_BACKING_DEVICE : 0;
 	sb.nbuckets = nblocks / sb.bucket_size;
+	sb.nr_in_set = 1;
 	uuid_unparse(sb.uuid, uuid);
 
 	do

@@ -18,8 +18,11 @@ struct cache_sb {
 	uint64_t	nbuckets;	/* device size */
 	uint64_t	btree_root;
 	uint16_t	btree_level;
-	uint16_t	_pad[3];
+	uint16_t	nr_in_set;
+	uint16_t	nr_this_dev;
+	uint16_t	_pad[1];
 	uint8_t		uuid[16];
+	uint8_t		set_uuid[16];
 };
 
 struct bucket_disk {
