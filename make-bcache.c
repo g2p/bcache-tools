@@ -1,6 +1,6 @@
 #define _FILE_OFFSET_BITS	64
 #define __USE_FILE_OFFSET64
-#define _XOPEN_SOURCE 500
+#define _XOPEN_SOURCE 600
 
 #include <fcntl.h>
 #include <linux/fs.h>
@@ -19,9 +19,9 @@
 
 char zero[4096];
 
-long getblocks(int fd)
+uint64_t getblocks(int fd)
 {
-	long ret;
+	uint64_t ret;
 	struct stat statbuf;
 	if (fstat(fd, &statbuf)) {
 		perror("stat error\n");
@@ -36,10 +36,10 @@ long getblocks(int fd)
 	return ret;
 }
 
-long hatoi(const char *s)
+uint64_t hatoi(const char *s)
 {
 	char *e;
-	long long i = strtol(s, &e, 10);
+	long long i = strtoll(s, &e, 10);
 	switch (*e) {
 		case 't':
 		case 'T':
@@ -70,15 +70,17 @@ void usage()
 int main(int argc, char **argv)
 {
 	bool cache = false, backingdev = false;
-	int64_t nblocks;
+	int64_t nblocks, journal = 0;
 	int fd, i, c;
-	char uuid[40];
-	struct cache_sb sb = { .block_size = 8, .bucket_size = 0 };
+	char uuid[40], set_uuid[40];
+	struct cache_sb sb;
+
+	memset(&sb, 0, sizeof(struct cache_sb));
 
 	uuid_generate(sb.uuid);
 	uuid_generate(sb.set_uuid);
 
-	while ((c = getopt(argc, argv, "CBU:w:b:")) != -1)
+	while ((c = getopt(argc, argv, "CBU:w:b:j:")) != -1)
 		switch (c) {
 		case 'C':
 			cache = true;
@@ -92,6 +94,9 @@ int main(int argc, char **argv)
 		case 'w':
 			sb.block_size = hatoi(optarg) / 512;
 			break;
+		case 'j':
+			journal = atoi(optarg);
+			break;
 		case 'U':
 			if (uuid_parse(optarg, sb.uuid)) {
 				printf("Bad uuid\n");
@@ -99,6 +104,9 @@ int main(int argc, char **argv)
 			}
 			break;
 		}
+
+	if (!sb.block_size)
+		sb.block_size = 4;
 
 	if (!sb.bucket_size)
 		sb.bucket_size = cache ? 256 : 8192;
@@ -119,7 +127,7 @@ int main(int argc, char **argv)
 		exit(EXIT_FAILURE);
 	}
 	nblocks = getblocks(fd);
-	printf("device is %li sectors\n", nblocks);
+	printf("device is %ju sectors\n", nblocks);
 
 	if (sb.bucket_size < sb.block_size ||
 	    sb.bucket_size > nblocks / 8) {
@@ -128,32 +136,28 @@ int main(int argc, char **argv)
 	}
 
 	memcpy(sb.magic, bcache_magic, 16);
-	sb.version = backingdev ? CACHE_BACKING_DEVICE : 0;
+	sb.version = backingdev ? CACHE_BACKING_DEV : 0;
 	sb.nbuckets = nblocks / sb.bucket_size;
 	sb.nr_in_set = 1;
 	uuid_unparse(sb.uuid, uuid);
+	uuid_unparse(sb.set_uuid, set_uuid);
 
-	do
-		sb.first_bucket = ((--sb.nbuckets * sizeof(struct bucket_disk)) + (24 << 9)) / (sb.bucket_size << 9) + 1;
-	while ((sb.nbuckets + sb.first_bucket) * sb.bucket_size > nblocks);
-
-	sb.journal_start = sb.first_bucket;
-
-	sb.btree_root = sb.first_bucket * sb.bucket_size;
-	sb.btree_level = 0;
+	sb.journal_start = ((sb.nbuckets * sizeof(struct bucket_disk)) + (24 << 9)) / (sb.bucket_size << 9) + 1;
+	sb.first_bucket = sb.journal_start + journal;
 
 	printf("block_size:		%u\n"
 	       "bucket_size:		%u\n"
 	       "journal_start:		%u\n"
 	       "first_bucket:		%u\n"
 	       "nbuckets:		%ju\n"
-	       "UUID:			%s\n",
+	       "UUID:			%s\n"
+	       "Set UUID:		%s\n",
 	       sb.block_size,
 	       sb.bucket_size,
 	       sb.journal_start,
 	       sb.first_bucket,
 	       sb.nbuckets,
-	       uuid);
+	       uuid, set_uuid);
 
 	/* Zero out priorities */
 	lseek(fd, 4096, SEEK_SET);
