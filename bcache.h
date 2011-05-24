@@ -35,6 +35,8 @@ struct cache_sb {
 	uint16_t	nr_in_set;
 	uint16_t	nr_this_dev;
 	uint16_t	_pad[1];
+#define SB_LABEL_SIZE	32
+	uint8_t		label[SB_LABEL_SIZE];
 };
 
 struct bucket_disk {

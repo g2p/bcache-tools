@@ -63,6 +63,8 @@ void usage()
 	       "	-C Format a cache device\n"
 	       "	-B Format a backing device\n"
 	       "	-b bucket size\n"
+	       "	-w block size (hard sector size of SSD, often 2k)\n"
+	       "	-j journal size, in buckets\n"
 	       "	-U UUID\n");
 	exit(EXIT_FAILURE);
 }
@@ -113,7 +115,7 @@ int main(int argc, char **argv)
 
 	if (cache == backingdev) {
 		printf("Must specify one of -C or -B\n");
-		exit(EXIT_FAILURE);
+		usage();
 	}
 
 	if (argc <= optind) {
@@ -159,11 +161,13 @@ int main(int argc, char **argv)
 	       sb.nbuckets,
 	       uuid, set_uuid);
 
-	/* Zero out priorities */
-	lseek(fd, 4096, SEEK_SET);
-	for (i = 8; i < sb.first_bucket * sb.bucket_size; i++)
-		if (write(fd, zero, 512) != 512)
-			goto err;
+	if (!backingdev) {
+		/* Zero out priorities */
+		lseek(fd, 4096, SEEK_SET);
+		for (i = 8; i < sb.first_bucket * sb.bucket_size; i++)
+			if (write(fd, zero, 512) != 512)
+				goto err;
+	}
 
 	if (pwrite(fd, &sb, sizeof(sb), 4096) != sizeof(sb))
 		goto err;
