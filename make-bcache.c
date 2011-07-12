@@ -65,7 +65,8 @@ void usage()
 	       "	-b bucket size\n"
 	       "	-w block size (hard sector size of SSD, often 2k)\n"
 	       "	-j journal size, in buckets\n"
-	       "	-U UUID\n");
+	       "	-U UUID\n"
+	       "	-S Set UUID\n");
 	exit(EXIT_FAILURE);
 }
 
@@ -101,6 +102,12 @@ int main(int argc, char **argv)
 			break;
 		case 'U':
 			if (uuid_parse(optarg, sb.uuid)) {
+				printf("Bad uuid\n");
+				exit(EXIT_FAILURE);
+			}
+			break;
+		case 'S':
+			if (uuid_parse(optarg, sb.set_uuid)) {
 				printf("Bad uuid\n");
 				exit(EXIT_FAILURE);
 			}
