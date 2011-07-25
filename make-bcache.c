@@ -2,6 +2,8 @@
 #define __USE_FILE_OFFSET64
 #define _XOPEN_SOURCE 600
 
+#include <ctype.h>
+#include <errno.h>
 #include <fcntl.h>
 #include <linux/fs.h>
 #include <stdbool.h>
@@ -64,7 +66,6 @@ void usage()
 	       "	-B Format a backing device\n"
 	       "	-b bucket size\n"
 	       "	-w block size (hard sector size of SSD, often 2k)\n"
-	       "	-j journal size, in buckets\n"
 	       "	-U UUID\n"
 	       "	-S Set UUID\n");
 	exit(EXIT_FAILURE);
@@ -73,9 +74,9 @@ void usage()
 int main(int argc, char **argv)
 {
 	bool cache = false, backingdev = false;
-	int64_t nblocks, journal = 0;
-	int fd, i, c;
-	char uuid[40], set_uuid[40];
+	int fd, c;
+	int64_t nblocks;
+	char uuid[40], set_uuid[40], *dev;
 	struct cache_sb sb;
 
 	memset(&sb, 0, sizeof(struct cache_sb));
@@ -96,9 +97,6 @@ int main(int argc, char **argv)
 			break;
 		case 'w':
 			sb.block_size = hatoi(optarg) / 512;
-			break;
-		case 'j':
-			journal = atoi(optarg);
 			break;
 		case 'U':
 			if (uuid_parse(optarg, sb.uuid)) {
@@ -130,51 +128,49 @@ int main(int argc, char **argv)
 		exit(EXIT_FAILURE);
 	}
 
-	fd = open(argv[optind], O_RDWR);
+	dev = argv[optind];
+	fd = open(dev, O_RDWR);
 	if (fd == -1) {
-		perror("Can't open dev\n");
+		printf("Can't open dev %s: %s\n", dev, strerror(errno));
 		exit(EXIT_FAILURE);
 	}
 	nblocks = getblocks(fd);
 	printf("device is %ju sectors\n", nblocks);
 
-	if (sb.bucket_size < sb.block_size ||
-	    sb.bucket_size > nblocks / 8) {
-		printf("Bad bucket size %i\n", sb.bucket_size);
-		exit(EXIT_FAILURE);
-	}
-
+	sb.offset_this_sb	= 8;
 	memcpy(sb.magic, bcache_magic, 16);
-	sb.version = backingdev ? CACHE_BACKING_DEV : 0;
-	sb.nbuckets = nblocks / sb.bucket_size;
-	sb.nr_in_set = 1;
+	sb.version		= backingdev ? CACHE_BACKING_DEV : 0;
+	sb.nbuckets		= nblocks / sb.bucket_size;
+	sb.nr_in_set		= 1;
 	uuid_unparse(sb.uuid, uuid);
 	uuid_unparse(sb.set_uuid, set_uuid);
 
-	sb.journal_start = ((sb.nbuckets * sizeof(struct bucket_disk)) + (24 << 9)) / (sb.bucket_size << 9) + 1;
-	sb.first_bucket = sb.journal_start + journal;
+	sb.first_bucket = (23 / sb.bucket_size) + 1;
 
-	printf("block_size:		%u\n"
-	       "bucket_size:		%u\n"
-	       "journal_start:		%u\n"
-	       "first_bucket:		%u\n"
+	if (cache)
+		if (sb.bucket_size < sb.block_size ||
+		    sb.bucket_size > nblocks / 8) {
+			printf("Bad bucket size %i\n", sb.bucket_size);
+			exit(EXIT_FAILURE);
+		}
+
+	printf("UUID:			%s\n"
+	       "Set UUID:		%s\n"
 	       "nbuckets:		%ju\n"
-	       "UUID:			%s\n"
-	       "Set UUID:		%s\n",
+	       "block_size:		%u\n"
+	       "bucket_size:		%u\n"
+	       "nr_in_set:		%u\n"
+	       "nr_this_dev:		%u\n"
+	       "first_bucket:		%u\n"
+	       "sizeof sb:		%lu\n",
+	       uuid, set_uuid,
+	       sb.nbuckets,
 	       sb.block_size,
 	       sb.bucket_size,
-	       sb.journal_start,
+	       sb.nr_in_set,
+	       sb.nr_this_dev,
 	       sb.first_bucket,
-	       sb.nbuckets,
-	       uuid, set_uuid);
-
-	if (!backingdev) {
-		/* Zero out priorities */
-		lseek(fd, 4096, SEEK_SET);
-		for (i = 8; i < sb.first_bucket * sb.bucket_size; i++)
-			if (write(fd, zero, 512) != 512)
-				goto err;
-	}
+	       sizeof(sb));
 
 	if (pwrite(fd, &sb, sizeof(sb), 4096) != sizeof(sb))
 		goto err;
