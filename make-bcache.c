@@ -71,26 +71,94 @@ void usage()
 	exit(EXIT_FAILURE);
 }
 
+void write_sb(char *dev, struct cache_sb *sb)
+{
+	int fd;
+	char uuid[40], set_uuid[40];
+
+	if (sb->version > 1) {
+		printf("Must specify one of -C or -B\n");
+		usage();
+	}
+
+	if ((sb->bucket_size & (sb->bucket_size - 1)) ||
+	    (sb->block_size  & (sb->block_size - 1))) {
+		printf("Block and bucket sizes must be powers of two\n");
+		exit(EXIT_FAILURE);
+	}
+
+	if (sb->bucket_size < sb->block_size) {
+		printf("Bad bucket size %i\n", sb->bucket_size);
+		exit(EXIT_FAILURE);
+	}
+
+	if ((fd = open(dev, O_RDWR)) == -1) {
+		printf("Can't open dev %s: %s\n", dev, strerror(errno));
+		exit(EXIT_FAILURE);
+	}
+
+	sb->offset		= SB_SECTOR;
+	memcpy(sb->magic, bcache_magic, 16);
+	sb->nbuckets		= getblocks(fd) / sb->bucket_size;
+	sb->nr_in_set		= 1;
+	sb->first_bucket	= (23 / sb->bucket_size) + 1;
+	uuid_unparse(sb->uuid, uuid);
+	uuid_unparse(sb->set_uuid, set_uuid);
+
+	if (sb->nbuckets < 1 << 7) {
+		printf("Not enough buckets: %ju, need %u\n",
+		       sb->nbuckets, 1 << 7);
+		exit(EXIT_FAILURE);
+	}
+
+	printf("UUID:			%s\n"
+	       "Set UUID:		%s\n"
+	       "nbuckets:		%ju\n"
+	       "block_size:		%u\n"
+	       "bucket_size:		%u\n"
+	       "nr_in_set:		%u\n"
+	       "nr_this_dev:		%u\n"
+	       "first_bucket:		%u\n",
+	       uuid, set_uuid,
+	       sb->nbuckets,
+	       sb->block_size,
+	       sb->bucket_size,
+	       sb->nr_in_set,
+	       sb->nr_this_dev,
+	       sb->first_bucket);
+
+	if (pwrite(fd, sb, sizeof(*sb), SB_SECTOR << 9) != sizeof(*sb)) {
+		perror("write error\n");
+		exit(EXIT_FAILURE);
+	}
+
+	fsync(fd);
+	close(fd);
+
+	uuid_generate(sb->uuid);
+}
+
 int main(int argc, char **argv)
 {
-	bool cache = false, backingdev = false;
-	int fd, c;
-	int64_t nblocks;
-	char uuid[40], set_uuid[40], *dev;
+	bool written = false;
+	int c;
 	struct cache_sb sb;
 
 	memset(&sb, 0, sizeof(struct cache_sb));
+	sb.version = 2;
+	sb.block_size = 8;
+	sb.bucket_size = 1024;
 
 	uuid_generate(sb.uuid);
 	uuid_generate(sb.set_uuid);
 
-	while ((c = getopt(argc, argv, "CBU:w:b:j:")) != -1)
+	while ((c = getopt(argc, argv, "-CBU:w:b:")) != -1)
 		switch (c) {
 		case 'C':
-			cache = true;
+			sb.version = 0;
 			break;
 		case 'B':
-			backingdev = true;
+			sb.version = CACHE_BACKING_DEV;
 			break;
 		case 'b':
 			sb.bucket_size = hatoi(optarg) / 512;
@@ -104,80 +172,16 @@ int main(int argc, char **argv)
 				exit(EXIT_FAILURE);
 			}
 			break;
-		case 'S':
-			if (uuid_parse(optarg, sb.set_uuid)) {
-				printf("Bad uuid\n");
-				exit(EXIT_FAILURE);
-			}
+		case 1:
+			write_sb(optarg, &sb);
+			written = true;
 			break;
 		}
 
-	if (!sb.block_size)
-		sb.block_size = 4;
-
-	if (!sb.bucket_size)
-		sb.bucket_size = cache ? 256 : 8192;
-
-	if (cache == backingdev) {
-		printf("Must specify one of -C or -B\n");
-		usage();
-	}
-
-	if (argc <= optind) {
+	if (!written) {
 		printf("Please supply a device\n");
 		exit(EXIT_FAILURE);
 	}
 
-	dev = argv[optind];
-	fd = open(dev, O_RDWR);
-	if (fd == -1) {
-		printf("Can't open dev %s: %s\n", dev, strerror(errno));
-		exit(EXIT_FAILURE);
-	}
-	nblocks = getblocks(fd);
-	printf("device is %ju sectors\n", nblocks);
-
-	sb.offset_this_sb	= 8;
-	memcpy(sb.magic, bcache_magic, 16);
-	sb.version		= backingdev ? CACHE_BACKING_DEV : 0;
-	sb.nbuckets		= nblocks / sb.bucket_size;
-	sb.nr_in_set		= 1;
-	uuid_unparse(sb.uuid, uuid);
-	uuid_unparse(sb.set_uuid, set_uuid);
-
-	sb.first_bucket = (23 / sb.bucket_size) + 1;
-
-	if (cache)
-		if (sb.bucket_size < sb.block_size ||
-		    sb.bucket_size > nblocks / 8) {
-			printf("Bad bucket size %i\n", sb.bucket_size);
-			exit(EXIT_FAILURE);
-		}
-
-	printf("UUID:			%s\n"
-	       "Set UUID:		%s\n"
-	       "nbuckets:		%ju\n"
-	       "block_size:		%u\n"
-	       "bucket_size:		%u\n"
-	       "nr_in_set:		%u\n"
-	       "nr_this_dev:		%u\n"
-	       "first_bucket:		%u\n"
-	       "sizeof sb:		%lu\n",
-	       uuid, set_uuid,
-	       sb.nbuckets,
-	       sb.block_size,
-	       sb.bucket_size,
-	       sb.nr_in_set,
-	       sb.nr_this_dev,
-	       sb.first_bucket,
-	       sizeof(sb));
-
-	if (pwrite(fd, &sb, sizeof(sb), 4096) != sizeof(sb))
-		goto err;
-
-	fsync(fd);
-	exit(EXIT_SUCCESS);
-err:
-	perror("write error\n");
-	return 1;
+	return 0;
 }
