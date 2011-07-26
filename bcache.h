@@ -38,7 +38,7 @@ struct cache_sb {
 
 	uint16_t		first_bucket;
 	uint16_t		keys;		/* number of journal buckets */
-	uint64_t		d[512];		/* journal buckets */
+	uint64_t		d[];		/* journal buckets */
 };
 
 inline uint64_t crc64(const void *_data, size_t len);
