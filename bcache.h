@@ -41,4 +41,12 @@ struct cache_sb {
 	uint64_t		d[512];		/* journal buckets */
 };
 
+inline uint64_t crc64(const void *_data, size_t len);
+
+#define node(i, j)		((void *) ((i)->d + (j)))
+#define end(i)			node(i, (i)->keys)
+
+#define csum_set(i)							\
+	crc64(((void *) (i)) + 8, ((void *) end(i)) - (((void *) (i)) + 8))
+
 #endif

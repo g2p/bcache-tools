@@ -17,4 +17,5 @@ clean:
 
 bcache-test: LDLIBS += -lm -lssl -lcrypto
 make-bcache: LDLIBS += -luuid
+make-bcache: bcache.o
 probe-bcache: LDLIBS += -luuid

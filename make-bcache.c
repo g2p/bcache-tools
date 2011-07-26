@@ -104,6 +104,7 @@ void write_sb(char *dev, struct cache_sb *sb)
 	sb->first_bucket	= (23 / sb->bucket_size) + 1;
 	uuid_unparse(sb->uuid, uuid);
 	uuid_unparse(sb->set_uuid, set_uuid);
+	sb->csum = csum_set(sb);
 
 	if (sb->nbuckets < 1 << 7) {
 		printf("Not enough buckets: %ju, need %u\n",
