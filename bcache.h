@@ -1,6 +1,16 @@
 #ifndef _BCACHE_H
 #define _BCACHE_H
 
+#define BITMASK(name, type, field, offset, size)		\
+static inline uint64_t name(const type *k)			\
+{ return (k->field >> offset) & ~(((uint64_t) ~0) << size); }	\
+								\
+static inline void SET_##name(type *k, uint64_t v)		\
+{								\
+	k->field &= ~(~((uint64_t) ~0 << size) << offset);	\
+	k->field |= v << offset;				\
+}
+
 static const char bcache_magic[] = {
 	0xc6, 0x85, 0x73, 0xf6, 0x4e, 0x1a, 0x45, 0xca,
 	0x82, 0x65, 0xf5, 0x7f, 0x48, 0xba, 0x6d, 0x81 };
@@ -40,6 +50,8 @@ struct cache_sb {
 	uint16_t		keys;		/* number of journal buckets */
 	uint64_t		d[];		/* journal buckets */
 };
+
+BITMASK(BDEV_WRITEBACK,	struct cache_sb, flags, 0, 1);
 
 inline uint64_t crc64(const void *_data, size_t len);
 

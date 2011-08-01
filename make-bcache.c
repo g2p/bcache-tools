@@ -5,6 +5,7 @@
 #include <ctype.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <getopt.h>
 #include <linux/fs.h>
 #include <stdbool.h>
 #include <stdint.h>
@@ -67,9 +68,15 @@ void usage()
 	       "	-b bucket size\n"
 	       "	-w block size (hard sector size of SSD, often 2k)\n"
 	       "	-U UUID\n"
-	       "	-S Set UUID\n");
+	       "	--writeback Enable writeback\n");
 	exit(EXIT_FAILURE);
 }
+
+int writeback;
+
+struct option opts[2] = {
+	{ "writeback", 0, &writeback, 1 }
+};
 
 void write_sb(char *dev, struct cache_sb *sb)
 {
@@ -96,6 +103,12 @@ void write_sb(char *dev, struct cache_sb *sb)
 		printf("Can't open dev %s: %s\n", dev, strerror(errno));
 		exit(EXIT_FAILURE);
 	}
+
+	if (sb->version == CACHE_BACKING_DEV &&
+	    writeback)
+		SET_BDEV_WRITEBACK(sb, 1);
+	else
+		SET_BDEV_WRITEBACK(sb, 0);
 
 	sb->offset		= SB_SECTOR;
 	memcpy(sb->magic, bcache_magic, 16);
@@ -153,7 +166,9 @@ int main(int argc, char **argv)
 	uuid_generate(sb.uuid);
 	uuid_generate(sb.set_uuid);
 
-	while ((c = getopt(argc, argv, "-CBU:w:b:")) != -1)
+	while ((c = getopt_long(argc, argv,
+				"-CBU:w:b:",
+				opts, NULL)) != -1)
 		switch (c) {
 		case 'C':
 			sb.version = 0;
