@@ -20,8 +20,6 @@
 
 #include "bcache.h"
 
-char zero[4096];
-
 uint64_t getblocks(int fd)
 {
 	uint64_t ret;
@@ -63,19 +61,25 @@ uint64_t hatoi(const char *s)
 void usage()
 {
 	printf("Usage: make-bcache [options] device\n"
-	       "	-C Format a cache device\n"
-	       "	-B Format a backing device\n"
-	       "	-b bucket size\n"
-	       "	-w block size (hard sector size of SSD, often 2k)\n"
-	       "	-U UUID\n"
-	       "	--writeback Enable writeback\n");
+	       "	-C, --cache		Format a cache device\n"
+	       "	-B, --bdev		Format a backing device\n"
+	       "	-b, --bucket		bucket size\n"
+	       "	-w, --block		block size (hard sector size of SSD, often 2k)\n"
+	       "	-U			UUID\n"
+	       "	    --writeback		enable writeback\n"
+	       "	-h, --help		display this help and exit\n");
 	exit(EXIT_FAILURE);
 }
 
 int writeback;
 
-struct option opts[2] = {
-	{ "writeback", 0, &writeback, 1 }
+struct option opts[7] = {
+	{ "cache",	0, NULL, 'C' },
+	{ "bdev",	0, NULL, 'B' },
+	{ "bucket",	1, NULL, 'b' },
+	{ "block",	1, NULL, 'w' },
+	{ "writeback",	0, &writeback, 0 },
+	{ "help",	0, NULL, 'h' },
 };
 
 void write_sb(char *dev, struct cache_sb *sb)
@@ -167,7 +171,7 @@ int main(int argc, char **argv)
 	uuid_generate(sb.set_uuid);
 
 	while ((c = getopt_long(argc, argv,
-				"-CBU:w:b:",
+				"-hCBU:w:b:",
 				opts, NULL)) != -1)
 		switch (c) {
 		case 'C':
@@ -188,6 +192,9 @@ int main(int argc, char **argv)
 				exit(EXIT_FAILURE);
 			}
 			break;
+		case 'h':
+			usage();
+			break;
 		case 1:
 			write_sb(optarg, &sb);
 			written = true;
@@ -196,7 +203,7 @@ int main(int argc, char **argv)
 
 	if (!written) {
 		printf("Please supply a device\n");
-		exit(EXIT_FAILURE);
+		usage();
 	}
 
 	return 0;
