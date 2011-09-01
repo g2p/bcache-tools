@@ -73,13 +73,14 @@ void usage()
 
 int writeback;
 
-struct option opts[7] = {
-	{ "cache",	0, NULL, 'C' },
-	{ "bdev",	0, NULL, 'B' },
-	{ "bucket",	1, NULL, 'b' },
-	{ "block",	1, NULL, 'w' },
-	{ "writeback",	0, &writeback, 0 },
-	{ "help",	0, NULL, 'h' },
+struct option opts[] = {
+	{ "cache",	0, NULL,	'C' },
+	{ "bdev",	0, NULL,	'B' },
+	{ "bucket",	1, NULL,	'b' },
+	{ "block",	1, NULL,	'w' },
+	{ "writeback",	0, &writeback,	1 },
+	{ "help",	0, NULL,	'h' },
+	{ NULL,		0, NULL,	0 },
 };
 
 void write_sb(char *dev, struct cache_sb *sb)
