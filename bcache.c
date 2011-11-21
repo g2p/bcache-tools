@@ -117,7 +117,7 @@ static const uint64_t crc_table[256] = {
 
 inline uint64_t crc64(const void *_data, size_t len)
 {
-	uint64_t crc = 0xffffffffffffffff;
+	uint64_t crc = 0xFFFFFFFFFFFFFFFFULL;
 	const unsigned char *data = _data;
 
 	while (len--) {
@@ -125,5 +125,5 @@ inline uint64_t crc64(const void *_data, size_t len)
 		crc = crc_table[i] ^ (crc << 8);
 	}
 
-	return crc ^ 0xffffffffffffffff;
+	return crc ^ 0xFFFFFFFFFFFFFFFFULL;
 }
