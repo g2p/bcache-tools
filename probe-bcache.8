@@ -1,0 +1,17 @@
+.TH probe-bcache 8
+.SH NAME
+probe-bcache \- probe a bcache device
+.SH SYNOPSIS
+.B probe-bcache
+[\fB \-o\ \fIudev\fR ]
+.I device
+.SH OPTIONS
+.TP
+.BR \-o
+return UUID in udev style for invocation by udev rule as IMPORT{program}
+.SH USAGE
+Return UUID if device identified as bcache-formatted.
+
+Only necessary until support for the bcache superblock is included
+in blkid; in the meantime, provides just enough functionality for a udev script
+to create the /dev/disk/by-uuid symlink.
