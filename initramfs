@@ -1,11 +1,9 @@
 #!/bin/sh -e
 
-case "$1" in
-prereqs)
-    echo "udev"
-    exit 0
-    ;;
-esac
+for i in `ls /sys/dev/block/`; do
+	DEV=/tmp/bcache_dev
 
-cp -p /lib/udev/rules.d/61-bcache.rules $DESTDIR/lib/udev/rules.d/
-cp -p /sbin/probe-bcache $DESTDIR/sbin
+	mknod	$DEV b `echo $i|sed -e 's/:/ /'`
+	echo	$DEV > /sys/fs/bcache/register_quiet
+	rm	$DEV
+done
