@@ -5,10 +5,11 @@ CFLAGS+=-O2 -Wall -g
 all: make-bcache probe-bcache
 
 install: make-bcache probe-bcache
-	install -m0755 make-bcache $(DESTDIR)${PREFIX}/sbin/
-	install -m0755 probe-bcache $(DESTDIR)/sbin/
-	install -m0644 61-bcache.rules $(DESTDIR)/lib/udev/rules.d/
-	install -m0755 initramfs $(DESTDIR)/etc/initramfs-tools/scripts/local-premount/bcache-probe
+	install -m0755 make-bcache	$(DESTDIR)${PREFIX}/sbin/
+	install -m0755 probe-bcache	$(DESTDIR)/sbin/
+	install -m0644 61-bcache.rules	$(DESTDIR)/lib/udev/rules.d/
+	install -m0755 initramfs/script $(DESTDIR)/etc/initramfs-tools/scripts/init-premount/bcache
+	install -m0755 initramfs/hook	$(DESTDIR)/etc/initramfs-tools/hooks/bcache
 	install -m0644 *.8 $(DESTDIR)${PREFIX}/share/man/man8
 #	install -m0755 bcache-test $(DESTDIR)${PREFIX}/sbin/
 

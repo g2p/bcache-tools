@@ -1,9 +1,0 @@
-#!/bin/sh -e
-
-for i in `ls /sys/dev/block/`; do
-	DEV=/tmp/bcache_dev
-
-	mknod	$DEV b `echo $i|sed -e 's/:/ /'`
-	echo	$DEV > /sys/fs/bcache/register_quiet
-	rm	$DEV
-done
