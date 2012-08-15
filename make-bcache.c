@@ -235,7 +235,7 @@ int main(int argc, char **argv)
 
 	memset(&sb, 0, sizeof(struct cache_sb));
 	sb.version = -1;
-	sb.block_size = 8;
+	sb.block_size = 1;
 	sb.bucket_size = 1024;
 
 	uuid_generate(sb.uuid);
