@@ -6,6 +6,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <getopt.h>
+#include <limits.h>
 #include <linux/fs.h>
 #include <stdbool.h>
 #include <stdint.h>
@@ -56,6 +57,30 @@ uint64_t hatoi(const char *s)
 			i *= 1024;
 	}
 	return i;
+}
+
+unsigned hatoi_validate(const char *s, const char *msg)
+{
+	uint64_t v = hatoi(s);
+
+	if (v & (v - 1)) {
+		printf("%s must be a power of two\n", msg);
+		exit(EXIT_FAILURE);
+	}
+
+	v /= 512;
+
+	if (v > USHRT_MAX) {
+		printf("%s too large\n", msg);
+		exit(EXIT_FAILURE);
+	}
+
+	if (!v) {
+		printf("%s too small\n", msg);
+		exit(EXIT_FAILURE);
+	}
+
+	return v;
 }
 
 char *skip_spaces(const char *str)
@@ -154,18 +179,12 @@ void write_sb(char *dev, struct cache_sb *sb)
 		usage();
 	}
 
-	if ((sb->bucket_size & (sb->bucket_size - 1)) ||
-	    (sb->block_size  & (sb->block_size - 1))) {
-		printf("Block and bucket sizes must be powers of two\n");
-		exit(EXIT_FAILURE);
-	}
-
 	if (sb->bucket_size < sb->block_size) {
-		printf("Bad bucket size %i\n", sb->bucket_size);
+		printf("Bucket size cannot be smaller than block size\n");
 		exit(EXIT_FAILURE);
 	}
 
-	if ((fd = open(dev, O_RDWR)) == -1) {
+	if ((fd = open(dev, O_RDWR|O_EXCL)) == -1) {
 		printf("Can't open dev %s: %s\n", dev, strerror(errno));
 		exit(EXIT_FAILURE);
 	}
@@ -252,10 +271,10 @@ int main(int argc, char **argv)
 			sb.version = CACHE_BACKING_DEV;
 			break;
 		case 'b':
-			sb.bucket_size = hatoi(optarg) / 512;
+			sb.bucket_size = hatoi_validate(optarg, "bucket size");
 			break;
 		case 'w':
-			sb.block_size = hatoi(optarg) / 512;
+			sb.block_size = hatoi_validate(optarg, "block size");
 			break;
 		case 'U':
 			if (uuid_parse(optarg, sb.uuid)) {
