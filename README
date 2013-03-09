@@ -22,3 +22,6 @@ Only necessary until support for the bcache superblock is included
 in blkid; in the meantime, provides just enough functionality for a udev script
 to create the /dev/disk/by-uuid symlink. The arguments it does support are the
 same as for blkid.
+
+bcache-super-show
+Prints the bcache superblock of a cache device or a backing device.
