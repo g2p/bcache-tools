@@ -60,13 +60,13 @@ int main(int argc, char **argv)
 		exit(2);
 	}
 
-	if (pread(fd, &sb, sizeof(sb), 4096) != sizeof(sb)) {
+	if (pread(fd, &sb, sizeof(sb), SB_START) != sizeof(sb)) {
 		fprintf(stderr, "Couldn't read\n");
 		exit(2);
 	}
 
 	printf("sb.magic\t\t");
-	if (! memcmp(sb.magic, bcache_magic, 16)) {
+	if (!memcmp(sb.magic, bcache_magic, 16)) {
 		printf("ok\n");
 	} else {
 		printf("bad magic\n");
@@ -89,7 +89,7 @@ int main(int argc, char **argv)
 		printf(" [match]\n");
 	} else {
 		printf(" [expected %" PRIX64 "]\n", expected_csum);
-		if (! force_csum) {
+		if (!force_csum) {
 			fprintf(stderr, "Corrupt superblock (bad csum)\n");
 			exit(2);
 		}
@@ -97,14 +97,20 @@ int main(int argc, char **argv)
 
 	printf("sb.version\t\t%" PRIu64, sb.version);
 	switch (sb.version) {
-		case 0:
+		case BCACHE_SB_VERSION_CDEV:
 			printf(" [cache device]\n");
 			break;
 
-		// SB_BDEV macro says bdev iff version is odd; only 0 and 1
-		// seem to be fully implemented however.
-		case CACHE_BACKING_DEV: // 1
+		case BCACHE_SB_VERSION_CDEV_WITH_UUID:
+			printf(" [cache device (new UUID format)]\n");
+			break;
+
+		case BCACHE_SB_VERSION_BDEV:
 			printf(" [backing device]\n");
+			break;
+
+		case BCACHE_SB_VERSION_BDEV_WITH_OFFSET:
+			printf(" [backing device with data offset]\n");
 			break;
 
 		default:
@@ -118,30 +124,36 @@ int main(int argc, char **argv)
 	uuid_unparse(sb.uuid, uuid);
 	printf("dev.uuid\t\t%s\n", uuid);
 
-	printf(
-			"dev.sectors_per_block\t%u\n"
-			"dev.sectors_per_bucket\t%u\n"
-			"dev.bucket_count\t%ju\n"
-			"dev.cache_count\t\t%u\n", // expect version == 0 ? 1 : 0
-			sb.block_size,
-			sb.bucket_size,
-			sb.nbuckets,
-			sb.nr_this_dev);
+	printf("dev.sectors_per_block\t%u\n"
+	       "dev.sectors_per_bucket\t%u\n"
+	       "dev.bucket_count\t%ju\n"
+	       "dev.cache_count\t\t%u\n", // expect SB_IS_BDEV(&sb) ? 0 : 1
+	       sb.block_size,
+	       sb.bucket_size,
+	       sb.nbuckets,
+	       sb.nr_this_dev);
 
-	if (sb.version == 0) {
-		printf(
-				"dev.cache.first_bucket\t%u\n"
-				"dev.cache.first_sector\t%u\n"
-				"dev.cache.discard\t%s\n",
-				sb.first_bucket,
-				sb.bucket_size * sb.first_bucket,
-				CACHE_DISCARD(&sb) ? "yes" : "no");
-	} else if (sb.version == CACHE_BACKING_DEV) {
-		printf(
-				"dev.data.first_sector\t%u\n"
-				"dev.data.writeback\t%s\n",
-				BDEV_DATA_START,
-				BDEV_WRITEBACK(&sb) ? "yes" : "no");
+	if (!SB_IS_BDEV(&sb)) {
+		printf("dev.cache.first_bucket\t%u\n"
+		       "dev.cache.first_sector\t%u\n"
+		       "dev.cache.discard\t%s\n",
+		       sb.first_bucket,
+		       sb.bucket_size * sb.first_bucket,
+		       CACHE_DISCARD(&sb) ? "yes" : "no");
+	} else if (sb.version == BCACHE_SB_VERSION_BDEV) {
+		printf("dev.data.first_sector\t%u\n"
+		       "dev.data.writeback\t%s\n",
+		       BDEV_DATA_START_DEFAULT,
+		       BDEV_WRITEBACK(&sb) ? "yes" : "no");
+	} else if (sb.version == BCACHE_SB_VERSION_BDEV_WITH_OFFSET) {
+		if (sb.keys == 1 || sb.d[0]) {
+			fprintf(stderr, "Possible experimental format detected, bailing\n");
+			exit(3);
+		}
+		printf("dev.data.first_sector\t%lu\n"
+		       "dev.data.writeback\t%s\n",
+		       sb.data_offset,
+		       BDEV_WRITEBACK(&sb) ? "yes" : "no");
 	}
 	putchar('\n');
 
