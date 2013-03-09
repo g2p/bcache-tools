@@ -25,6 +25,8 @@ static const char bcache_magic[] = {
 
 #define SB_SECTOR		8
 #define SB_LABEL_SIZE		32
+#define BDEV_DATA_START		16	/* sectors */
+
 
 struct cache_sb {
 	uint64_t		csum;

@@ -154,7 +154,7 @@ const char * const cache_replacement_policies[] = {
 int writeback;
 int discard;
 unsigned cache_replacement_policy;
-uint64_t data_offset = 16;
+uint64_t data_offset = BDEV_DATA_START;
 
 struct option opts[] = {
 	{ "cache",		0, NULL,	'C' },
@@ -194,7 +194,7 @@ void write_sb(char *dev, struct cache_sb *sb)
 	if (SB_BDEV(sb)) {
 		SET_BDEV_WRITEBACK(sb, writeback);
 
-		if (data_offset != 16) {
+		if (data_offset != BDEV_DATA_START) {
 			sb->version = BCACHE_SB_BDEV_VERSION;
 			sb->keys = 1;
 			sb->d[0] = data_offset;
@@ -288,8 +288,8 @@ int main(int argc, char **argv)
 			break;
 		case 'o':
 			data_offset = atoll(optarg);
-			if (sb.d[0] < 16) {
-				printf("Bad data offset; minimum 16 sectors\n");
+			if (sb.d[0] < BDEV_DATA_START) {
+				printf("Bad data offset; minimum %d sectors\n", BDEV_DATA_START);
 				exit(EXIT_FAILURE);
 			}
 			break;

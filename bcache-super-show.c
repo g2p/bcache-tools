@@ -97,12 +97,12 @@ int main(int argc, char **argv)
 
 	printf("sb.version\t\t%" PRIu64, sb.version);
 	switch (sb.version) {
-		case 1:
-			printf(" [backing device]\n");
+		case 0:
+			printf(" [cache device]\n");
 			break;
 
-		case 2:
-			printf(" [cache device]\n");
+		case CACHE_BACKING_DEV: // 1
+			printf(" [backing device]\n");
 			break;
 
 		case 3:
@@ -125,15 +125,23 @@ int main(int argc, char **argv)
 			"dev.sectors_per_block\t%u\n"
 			"dev.sectors_per_bucket\t%u\n"
 			"dev.bucket_count\t%ju\n"
-			"dev.cache_count\t\t%u\n" // expect version == 2 ? 1 : 0
-			"dev.data.first_bucket\t%u\n",
+			"dev.cache_count\t\t%u\n", // expect version == 0 ? 1 : 0
 			sb.block_size,
 			sb.bucket_size,
 			sb.nbuckets,
-			sb.nr_this_dev,
-			sb.first_bucket);
+			sb.nr_this_dev);
 
-	printf("dev.data.first_sector\t%u\n", sb.bucket_size * sb.first_bucket);
+	if (sb.version == 0) {
+		printf(
+				"dev.cache.first_bucket\t%u\n"
+				"dev.cache.first_sector\t%u\n",
+				sb.first_bucket,
+				sb.bucket_size * sb.first_bucket);
+	} else if (sb.version == CACHE_BACKING_DEV) {
+		printf(
+				"dev.data.first_sector\t%u\n",
+				BDEV_DATA_START);
+	}
 	putchar('\n');
 
 	uuid_unparse(sb.set_uuid, uuid);
