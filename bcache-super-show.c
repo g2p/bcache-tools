@@ -131,13 +131,17 @@ int main(int argc, char **argv)
 	if (sb.version == 0) {
 		printf(
 				"dev.cache.first_bucket\t%u\n"
-				"dev.cache.first_sector\t%u\n",
+				"dev.cache.first_sector\t%u\n"
+				"dev.cache.discard\t%s\n",
 				sb.first_bucket,
-				sb.bucket_size * sb.first_bucket);
+				sb.bucket_size * sb.first_bucket,
+				CACHE_DISCARD(&sb) ? "yes" : "no");
 	} else if (sb.version == CACHE_BACKING_DEV) {
 		printf(
-				"dev.data.first_sector\t%u\n",
-				BDEV_DATA_START);
+				"dev.data.first_sector\t%u\n"
+				"dev.data.writeback\t%s\n",
+				BDEV_DATA_START,
+				BDEV_WRITEBACK(&sb) ? "yes" : "no");
 	}
 	putchar('\n');
 
