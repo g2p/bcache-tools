@@ -101,14 +101,11 @@ int main(int argc, char **argv)
 			printf(" [cache device]\n");
 			break;
 
+		// SB_BDEV macro says bdev iff version is odd; only 0 and 1
+		// seem to be fully implemented however.
 		case CACHE_BACKING_DEV: // 1
 			printf(" [backing device]\n");
 			break;
-
-		case 3:
-			printf(" [backing device with offset]\n");
-			// XXX Kernel side bcache.h says different, and implements neither
-			return 0; //break;
 
 		default:
 			printf(" [unknown]\n");
