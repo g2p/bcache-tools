@@ -83,7 +83,7 @@ int main(int argc, char **argv)
 		exit(2);
 	}
 
-	printf("sb.csum\t\t\t0x%" PRIx64, sb.csum);
+	printf("sb.csum\t\t\t%" PRIX64, sb.csum);
 	expected_csum = csum_set(&sb);
 	if (sb.csum == expected_csum) {
 		printf(" [match]\n");
