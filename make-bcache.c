@@ -136,6 +136,8 @@ void usage()
 	       "	-B, --bdev		Format a backing device\n"
 	       "	-b, --bucket		bucket size\n"
 	       "	-w, --block		block size (hard sector size of SSD, often 2k)\n"
+	       "	-o, --data-offset	data offset in sectors\n"
+	       "	    --cset-uuid		UUID for the cache set\n"
 //	       "	-U			UUID\n"
 	       "	    --writeback		enable writeback\n"
 	       "	    --discard		enable discards\n"
@@ -268,6 +270,7 @@ int main(int argc, char **argv)
 		{ "discard",		0, &discard,	1 },
 		{ "cache_replacement_policy", 1, NULL, 'p' },
 		{ "data_offset",	1, NULL,	'o' },
+		{ "cset-uuid",		1, NULL,	'u' },
 		{ "help",		0, NULL,	'h' },
 		{ NULL,			0, NULL,	0 },
 	};
@@ -305,6 +308,12 @@ int main(int argc, char **argv)
 			if (data_offset < BDEV_DATA_START_DEFAULT) {
 				printf("Bad data offset; minimum %d sectors\n",
 				       BDEV_DATA_START_DEFAULT);
+				exit(EXIT_FAILURE);
+			}
+			break;
+		case 'u':
+			if (uuid_parse(optarg, sb->set_uuid)) {
+				printf("Bad uuid\n");
 				exit(EXIT_FAILURE);
 			}
 			break;
