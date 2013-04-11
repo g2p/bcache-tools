@@ -161,66 +161,79 @@ static void write_sb(char *dev, unsigned block_size, unsigned bucket_size,
 	char uuid_str[40], set_uuid_str[40];
 	struct cache_sb sb;
 
-	memset(&sb, 0, sizeof(struct cache_sb));
-
-	sb.version	= bdev ? CACHE_BACKING_DEV : 0;
-	sb.bucket_size	= bucket_size;
-	sb.block_size	= block_size;
-
-	uuid_generate(sb.uuid);
-	memcpy(sb.set_uuid, set_uuid, sizeof(sb.set_uuid));
-
-	if (SB_BDEV(&sb)) {
-		SET_BDEV_WRITEBACK(&sb, writeback);
-
-		if (data_offset != BDEV_DATA_START) {
-			sb.version = BCACHE_SB_BDEV_VERSION;
-			sb.keys = 1;
-			sb.d[0] = data_offset;
-		}
-	} else {
-		SET_CACHE_DISCARD(&sb, discard);
-		SET_CACHE_REPLACEMENT(&sb, cache_replacement_policy);
-	}
-
 	if ((fd = open(dev, O_RDWR|O_EXCL)) == -1) {
 		printf("Can't open dev %s: %s\n", dev, strerror(errno));
 		exit(EXIT_FAILURE);
 	}
 
-	sb.offset		= SB_SECTOR;
-	memcpy(sb.magic, bcache_magic, 16);
-	sb.nbuckets		= getblocks(fd) / sb.bucket_size;
-	sb.nr_in_set		= 1;
-	sb.first_bucket		= (23 / sb.bucket_size) + 1;
-	sb.csum = csum_set(&sb);
+	memset(&sb, 0, sizeof(struct cache_sb));
 
-	if (sb.nbuckets < 1 << 7) {
-		printf("Not enough buckets: %ju, need %u\n",
-		       sb.nbuckets, 1 << 7);
-		exit(EXIT_FAILURE);
-	}
+	sb.offset	= SB_SECTOR;
+	sb.version	= bdev
+		? BCACHE_SB_VERSION_BDEV
+		: BCACHE_SB_VERSION_CDEV;
+
+	memcpy(sb.magic, bcache_magic, 16);
+	uuid_generate(sb.uuid);
+	memcpy(sb.set_uuid, set_uuid, sizeof(sb.set_uuid));
+
+	sb.bucket_size	= bucket_size;
+	sb.block_size	= block_size;
 
 	uuid_unparse(sb.uuid, uuid_str);
 	uuid_unparse(sb.set_uuid, set_uuid_str);
 
-	printf("UUID:			%s\n"
-	       "Set UUID:		%s\n"
-	       "version:		%u\n"
-	       "nbuckets:		%ju\n"
-	       "block_size:		%u\n"
-	       "bucket_size:		%u\n"
-	       "nr_in_set:		%u\n"
-	       "nr_this_dev:		%u\n"
-	       "first_bucket:		%u\n",
-	       uuid_str, set_uuid_str,
-	       (unsigned) sb.version,
-	       sb.nbuckets,
-	       sb.block_size,
-	       sb.bucket_size,
-	       sb.nr_in_set,
-	       sb.nr_this_dev,
-	       sb.first_bucket);
+	if (SB_BDEV(&sb)) {
+		SET_BDEV_WRITEBACK(&sb, writeback);
+
+		if (data_offset != BDEV_DATA_START_DEFAULT) {
+			sb.version = BCACHE_SB_VERSION_BDEV_WITH_OFFSET;
+			sb.data_offset = data_offset;
+		}
+
+		printf("UUID:			%s\n"
+		       "Set UUID:		%s\n"
+		       "version:		%u\n"
+		       "block_size:		%u\n"
+		       "data_offset:		%ju\n",
+		       uuid_str, set_uuid_str,
+		       (unsigned) sb.version,
+		       sb.block_size,
+		       sb.data_offset);
+	} else {
+		sb.nbuckets		= getblocks(fd) / sb.bucket_size;
+		sb.nr_in_set		= 1;
+		sb.first_bucket		= (23 / sb.bucket_size) + 1;
+
+		if (sb.nbuckets < 1 << 7) {
+			printf("Not enough buckets: %ju, need %u\n",
+			       sb.nbuckets, 1 << 7);
+			exit(EXIT_FAILURE);
+		}
+
+		SET_CACHE_DISCARD(&sb, discard);
+		SET_CACHE_REPLACEMENT(&sb, cache_replacement_policy);
+
+		printf("UUID:			%s\n"
+		       "Set UUID:		%s\n"
+		       "version:		%u\n"
+		       "nbuckets:		%ju\n"
+		       "block_size:		%u\n"
+		       "bucket_size:		%u\n"
+		       "nr_in_set:		%u\n"
+		       "nr_this_dev:		%u\n"
+		       "first_bucket:		%u\n",
+		       uuid_str, set_uuid_str,
+		       (unsigned) sb.version,
+		       sb.nbuckets,
+		       sb.block_size,
+		       sb.bucket_size,
+		       sb.nr_in_set,
+		       sb.nr_this_dev,
+		       sb.first_bucket);
+	}
+
+	sb.csum = csum_set(&sb);
 
 	if (pwrite(fd, &sb, sizeof(sb), SB_SECTOR << 9) != sizeof(sb)) {
 		perror("write error\n");
@@ -241,7 +254,7 @@ int main(int argc, char **argv)
 	unsigned block_size = 1, bucket_size = 1024;
 	int writeback = 0, discard = 0;
 	unsigned cache_replacement_policy = 0;
-	uint64_t data_offset = BDEV_DATA_START;
+	uint64_t data_offset = BDEV_DATA_START_DEFAULT;
 	uuid_t set_uuid;
 
 	uuid_generate(set_uuid);
@@ -289,8 +302,9 @@ int main(int argc, char **argv)
 			break;
 		case 'o':
 			data_offset = atoll(optarg);
-			if (data_offset < BDEV_DATA_START) {
-				printf("Bad data offset; minimum %d sectors\n", BDEV_DATA_START);
+			if (data_offset < BDEV_DATA_START_DEFAULT) {
+				printf("Bad data offset; minimum %d sectors\n",
+				       BDEV_DATA_START_DEFAULT);
 				exit(EXIT_FAILURE);
 			}
 			break;

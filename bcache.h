@@ -15,24 +15,27 @@ static const char bcache_magic[] = {
 	0xc6, 0x85, 0x73, 0xf6, 0x4e, 0x1a, 0x45, 0xca,
 	0x82, 0x65, 0xf5, 0x7f, 0x48, 0xba, 0x6d, 0x81 };
 
-/* Version 1: Backing dev
+/*
+ * Version 0: Cache device
+ * Version 1: Backing device
  * Version 2: Seed pointer into btree node checksum
- * Version 3: Backing dev superblock has offset of start of data
+ * Version 3: Cache device with new UUID format
+ * Version 4: Backing device with data offset
  */
-
-#define BCACHE_SB_BDEV_VERSION	3
-#define BCACHE_SB_MAX_VERSION	3
+#define BCACHE_SB_VERSION_CDEV			0
+#define BCACHE_SB_VERSION_BDEV			1
+#define BCACHE_SB_VERSION_CDEV_WITH_UUID	3
+#define BCACHE_SB_VERSION_BDEV_WITH_OFFSET	4
+#define BCACHE_SB_MAX_VERSION			4
 
 #define SB_SECTOR		8
 #define SB_LABEL_SIZE		32
-#define BDEV_DATA_START		16	/* sectors */
-
+#define BDEV_DATA_START_DEFAULT	16	/* sectors */
 
 struct cache_sb {
 	uint64_t		csum;
 	uint64_t		offset;	/* sector where this sb was written */
 	uint64_t		version;
-#define CACHE_BACKING_DEV	1
 
 	uint8_t			magic[16];
 
@@ -47,18 +50,37 @@ struct cache_sb {
 	uint64_t		seq;
 	uint64_t		pad[8];
 
-	uint64_t		nbuckets;	/* device size */
-	uint16_t		block_size;	/* sectors */
-	uint16_t		bucket_size;	/* sectors */
+	union {
+	struct {
+		/* Cache devices */
+		uint64_t	nbuckets;	/* device size */
 
-	uint16_t		nr_in_set;
-	uint16_t		nr_this_dev;
+		uint16_t	block_size;	/* sectors */
+		uint16_t	bucket_size;	/* sectors */
+
+		uint16_t	nr_in_set;
+		uint16_t	nr_this_dev;
+	};
+	struct {
+		/* Backing devices */
+		uint64_t	data_offset;
+
+		/*
+		 * block_size from the cache device section is still used by
+		 * backing devices, so don't add anything here until we fix
+		 * things to not need it for backing devices anymore
+		 */
+	};
+	};
 
 	uint32_t		last_mount;	/* time_t */
 
 	uint16_t		first_bucket;
-	uint16_t		keys;		/* number of journal buckets */
-	uint64_t		d[];		/* journal buckets */
+	union {
+		uint16_t	njournal_buckets;
+		uint16_t	keys;
+	};
+	uint64_t		d[];	/* journal buckets */
 };
 
 BITMASK(SB_BDEV,	struct cache_sb, version, 0, 1);
