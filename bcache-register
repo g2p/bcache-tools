@@ -1,0 +1,4 @@
+#!/bin/sh
+modprobe -qba bcache
+test -f /sys/fs/bcache/register && echo "$1" > /sys/fs/bcache/register
+

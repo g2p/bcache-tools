@@ -1,3 +1,8 @@
-KERNEL=="sd*", ENV{DEVTYPE}=="disk", IMPORT{program}="/sbin/probe-bcache -o udev $tempnode"
+# register bcache devices as they come up
+# man 7 udev for syntax
 
+SUBSYSTEM=="block", IMPORT{program}="/sbin/probe-bcache -o udev $tempnode"
 ENV{ID_FS_UUID_ENC}=="?*", SYMLINK+="disk/by-uuid/$env{ID_FS_UUID_ENC}"
+SUBSYSTEM=="block", ACTION=="add|change", ENV{ID_FS_TYPE}=="bcache", \
+        RUN+="bcache-register $tempnode"
+
