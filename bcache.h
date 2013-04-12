@@ -30,6 +30,7 @@ static const char bcache_magic[] = {
 
 #define SB_SECTOR		8
 #define SB_LABEL_SIZE		32
+#define SB_JOURNAL_BUCKETS	256U
 #define BDEV_DATA_START_DEFAULT	16	/* sectors */
 
 struct cache_sb {
@@ -80,7 +81,7 @@ struct cache_sb {
 		uint16_t	njournal_buckets;
 		uint16_t	keys;
 	};
-	uint64_t		d[];	/* journal buckets */
+	uint64_t		d[SB_JOURNAL_BUCKETS];	/* journal buckets */
 };
 
 BITMASK(SB_BDEV,	struct cache_sb, version, 0, 1);
