@@ -312,7 +312,7 @@ int main(int argc, char **argv)
 			}
 			break;
 		case 'u':
-			if (uuid_parse(optarg, sb->set_uuid)) {
+			if (uuid_parse(optarg, set_uuid)) {
 				printf("Bad uuid\n");
 				exit(EXIT_FAILURE);
 			}
