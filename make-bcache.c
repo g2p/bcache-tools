@@ -21,6 +21,12 @@
 
 #include "bcache.h"
 
+#define max(x, y) ({				\
+	typeof(x) _max1 = (x);			\
+	typeof(y) _max2 = (y);			\
+	(void) (&_max1 == &_max2);		\
+	_max1 > _max2 ? _max1 : _max2; })
+
 uint64_t getblocks(int fd)
 {
 	uint64_t ret;
@@ -246,6 +252,19 @@ static void write_sb(char *dev, unsigned block_size, unsigned bucket_size,
 	close(fd);
 }
 
+static unsigned get_blocksize(const char *path)
+{
+	struct stat statbuf;
+
+	if (stat(path, &statbuf)) {
+		fprintf(stderr, "Error statting %s: %s\n",
+			path, strerror(errno));
+		exit(EXIT_FAILURE);
+	}
+
+	return statbuf.st_blksize / 512;
+}
+
 int main(int argc, char **argv)
 {
 	int c, bdev = -1;
@@ -253,7 +272,7 @@ int main(int argc, char **argv)
 	char *cache_devices[argc];
 	char *backing_devices[argc];
 
-	unsigned block_size = 1, bucket_size = 1024;
+	unsigned block_size = 0, bucket_size = 1024;
 	int writeback = 0, discard = 0;
 	unsigned cache_replacement_policy = 0;
 	uint64_t data_offset = BDEV_DATA_START_DEFAULT;
@@ -341,6 +360,16 @@ int main(int argc, char **argv)
 	if (bucket_size < block_size) {
 		printf("Bucket size cannot be smaller than block size\n");
 		exit(EXIT_FAILURE);
+	}
+
+	if (!block_size) {
+		for (i = 0; i < ncache_devices; i++)
+			block_size = max(block_size,
+					 get_blocksize(cache_devices[i]));
+
+		for (i = 0; i < nbacking_devices; i++)
+			block_size = max(block_size,
+					 get_blocksize(backing_devices[i]));
 	}
 
 	for (i = 0; i < ncache_devices; i++)
