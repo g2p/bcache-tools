@@ -207,7 +207,7 @@ static void write_sb(char *dev, unsigned block_size, unsigned bucket_size,
 		       uuid_str, set_uuid_str,
 		       (unsigned) sb.version,
 		       sb.block_size,
-		       sb.data_offset);
+		       data_offset);
 	} else {
 		sb.nbuckets		= getblocks(fd) / sb.bucket_size;
 		sb.nr_in_set		= 1;
