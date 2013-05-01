@@ -149,11 +149,11 @@ int main(int argc, char **argv)
 			}
 			first_sector = sb.data_offset;
 		}
+
 		printf("dev.data.first_sector\t%ju\n"
 		       "dev.data.cache_mode\t%ju",
 		       first_sector,
 		       BDEV_CACHE_MODE(&sb));
-
 		switch (BDEV_CACHE_MODE(&sb)) {
 			case CACHE_MODE_WRITETHROUGH:
 				printf(" [writethrough]\n");
@@ -166,6 +166,25 @@ int main(int argc, char **argv)
 				break;
 			case CACHE_MODE_NONE:
 				printf(" [no caching]\n");
+				break;
+			default:
+				putchar('\n');
+		}
+
+		printf("dev.data.cache_state\t%ju",
+		       BDEV_STATE(&sb));
+		switch (BDEV_STATE(&sb)) {
+			case BDEV_STATE_NONE:
+				printf(" [detached]\n");
+				break;
+			case BDEV_STATE_CLEAN:
+				printf(" [clean]\n");
+				break;
+			case BDEV_STATE_DIRTY:
+				printf(" [dirty]\n");
+				break;
+			case BDEV_STATE_STALE:
+				printf(" [inconsistent]\n");
 				break;
 			default:
 				putchar('\n');
