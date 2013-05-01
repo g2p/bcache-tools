@@ -121,21 +121,22 @@ int main(int argc, char **argv)
 	printf("dev.uuid\t\t%s\n", uuid);
 
 	printf("dev.sectors_per_block\t%u\n"
-	       "dev.sectors_per_bucket\t%u\n"
-	       "dev.bucket_count\t%ju\n"
-	       "dev.cache_count\t\t%u\n", // expect SB_IS_BDEV(&sb) ? 0 : 1
+	       "dev.sectors_per_bucket\t%u\n",
 	       sb.block_size,
-	       sb.bucket_size,
-	       sb.nbuckets,
-	       sb.nr_this_dev);
+	       sb.bucket_size);
 
 	if (!SB_IS_BDEV(&sb)) {
-		printf("dev.cache.first_bucket\t%u\n"
-		       "dev.cache.first_sector\t%u\n"
-		       "dev.cache.discard\t%s\n",
-		       sb.first_bucket,
+		// total_sectors includes the superblock;
+		printf("dev.cache.first_sector\t%u\n"
+		       "dev.cache.cache_sectors\t%ju\n"
+		       "dev.cache.total_sectors\t%ju\n"
+		       "dev.cache.discard\t%s\n"
+		       "dev.cache.pos\t\t%u\n",
 		       sb.bucket_size * sb.first_bucket,
-		       CACHE_DISCARD(&sb) ? "yes" : "no");
+		       sb.bucket_size * (sb.nbuckets - sb.first_bucket),
+		       sb.bucket_size * sb.nbuckets,
+		       CACHE_DISCARD(&sb) ? "yes" : "no",
+		       sb.nr_this_dev);
 	} else if (sb.version == BCACHE_SB_VERSION_BDEV) {
 		printf("dev.data.first_sector\t%u\n"
 		       "dev.data.writeback\t%s\n",
