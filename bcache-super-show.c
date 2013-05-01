@@ -97,20 +97,16 @@ int main(int argc, char **argv)
 
 	printf("sb.version\t\t%" PRIu64, sb.version);
 	switch (sb.version) {
+		// These are handled the same by the kernel
 		case BCACHE_SB_VERSION_CDEV:
+		case BCACHE_SB_VERSION_CDEV_WITH_UUID:
 			printf(" [cache device]\n");
 			break;
 
-		case BCACHE_SB_VERSION_CDEV_WITH_UUID:
-			printf(" [cache device (new UUID format)]\n");
-			break;
-
+		// The second adds data offset support
 		case BCACHE_SB_VERSION_BDEV:
-			printf(" [backing device]\n");
-			break;
-
 		case BCACHE_SB_VERSION_BDEV_WITH_OFFSET:
-			printf(" [backing device with data offset]\n");
+			printf(" [backing device]\n");
 			break;
 
 		default:
