@@ -157,7 +157,5 @@ int main(int argc, char **argv)
 	uuid_unparse(sb.set_uuid, uuid);
 	printf("cset.uuid\t\t%s\n", uuid);
 
-	printf("cset.cache_count\t%u\n\n", sb.nr_in_set);
-
 	return 0;
 }
