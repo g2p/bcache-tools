@@ -192,7 +192,8 @@ static void write_sb(char *dev, unsigned block_size, unsigned bucket_size,
 	uuid_unparse(sb.set_uuid, set_uuid_str);
 
 	if (SB_IS_BDEV(&sb)) {
-		SET_BDEV_WRITEBACK(&sb, writeback);
+		SET_BDEV_CACHE_MODE(
+			&sb, writeback ? CACHE_MODE_WRITEBACK : CACHE_MODE_WRITETHROUGH);
 
 		if (data_offset != BDEV_DATA_START_DEFAULT) {
 			sb.version = BCACHE_SB_VERSION_BDEV_WITH_OFFSET;

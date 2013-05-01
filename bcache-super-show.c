@@ -137,20 +137,39 @@ int main(int argc, char **argv)
 		       sb.bucket_size * sb.nbuckets,
 		       CACHE_DISCARD(&sb) ? "yes" : "no",
 		       sb.nr_this_dev);
-	} else if (sb.version == BCACHE_SB_VERSION_BDEV) {
-		printf("dev.data.first_sector\t%u\n"
-		       "dev.data.writeback\t%s\n",
-		       BDEV_DATA_START_DEFAULT,
-		       BDEV_WRITEBACK(&sb) ? "yes" : "no");
-	} else if (sb.version == BCACHE_SB_VERSION_BDEV_WITH_OFFSET) {
-		if (sb.keys == 1 || sb.d[0]) {
-			fprintf(stderr, "Possible experimental format detected, bailing\n");
-			exit(3);
+	} else {
+		uint64_t first_sector;
+		if (sb.version == BCACHE_SB_VERSION_BDEV) {
+			first_sector = BDEV_DATA_START_DEFAULT;
+		} else {
+			if (sb.keys == 1 || sb.d[0]) {
+				fprintf(stderr,
+					"Possible experimental format detected, bailing\n");
+				exit(3);
+			}
+			first_sector = sb.data_offset;
 		}
-		printf("dev.data.first_sector\t%lu\n"
-		       "dev.data.writeback\t%s\n",
-		       sb.data_offset,
-		       BDEV_WRITEBACK(&sb) ? "yes" : "no");
+		printf("dev.data.first_sector\t%ju\n"
+		       "dev.data.cache_mode\t%ju",
+		       first_sector,
+		       BDEV_CACHE_MODE(&sb));
+
+		switch (BDEV_CACHE_MODE(&sb)) {
+			case CACHE_MODE_WRITETHROUGH:
+				printf(" [writethrough]\n");
+				break;
+			case CACHE_MODE_WRITEBACK:
+				printf(" [writeback]\n");
+				break;
+			case CACHE_MODE_WRITEAROUND:
+				printf(" [writearound]\n");
+				break;
+			case CACHE_MODE_NONE:
+				printf(" [no caching]\n");
+				break;
+			default:
+				putchar('\n');
+		}
 	}
 	putchar('\n');
 
