@@ -1,0 +1,15 @@
+Add a manpage for bcache-super-show
+--- /dev/null
++++ b/bcache-super-show.8
+@@ -0,0 +1,11 @@
++.TH bcache-super-show 8
++.SH NAME
++bcache-super-show \- Print the bcache superblock
++.SH SYNOPSIS
++.B bcache-super-show
++[\fB \-f]
++.I device
++.SH OPTIONS
++.TP
++.BR \-f
++Ignore superblock verification

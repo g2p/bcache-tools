@@ -1,0 +1,5 @@
+bcache-tools (1.0-1) unstable; urgency=low
+
+  * Initial release. (Closes: #708132)
+
+ -- Tom Strickx <tstrickx@rootcu.be>  Tue, 14 May 2013 13:27:21 +0200
