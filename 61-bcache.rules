@@ -13,6 +13,8 @@ SUBSYSTEM=="block", ACTION=="add|change", ENV{ID_FS_TYPE}=="bcache", \
 # Cached devices: symlink
 DRIVER=="bcache", ENV{CACHED_UUID}=="?*", \
         SYMLINK+="bcache/by-uuid/$env{CACHED_UUID}"
+DRIVER=="bcache", ENV{CACHED_LABEL}=="?*", \
+        SYMLINK+="bcache/by-label/$env{CACHED_LABEL}"
 
 LABEL="bcache_end"
 
