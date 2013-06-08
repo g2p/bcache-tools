@@ -1,8 +1,18 @@
 # register bcache devices as they come up
 # man 7 udev for syntax
 
-SUBSYSTEM=="block", IMPORT{program}="/sbin/probe-bcache -o udev $tempnode"
+SUBSYSTEM!="block", GOTO="bcache_end"
+ACTION=="remove", GOTO="bcache_end"
+
+# Backing devices: scan, symlink, register
+IMPORT{program}="/sbin/probe-bcache -o udev $tempnode"
 ENV{ID_FS_UUID_ENC}=="?*", SYMLINK+="disk/by-uuid/$env{ID_FS_UUID_ENC}"
 SUBSYSTEM=="block", ACTION=="add|change", ENV{ID_FS_TYPE}=="bcache", \
         RUN+="bcache-register $tempnode"
+
+# Cached devices: symlink
+DRIVER=="bcache", ENV{CACHED_UUID}=="?*", \
+        SYMLINK+="bcache/by-uuid/$env{CACHED_UUID}"
+
+LABEL="bcache_end"
 
