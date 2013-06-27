@@ -1,3 +1,9 @@
+/*
+ * Author: Kent Overstreet <kmo@daterainc.com>
+ *
+ * GPLv2
+ */
+
 #ifndef _BCACHE_H
 #define _BCACHE_H
 

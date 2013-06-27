@@ -1,3 +1,9 @@
+/*
+ * Author: Kent Overstreet <kmo@daterainc.com>
+ *
+ * GPLv2
+ */
+
 #define _FILE_OFFSET_BITS	64
 #define _XOPEN_SOURCE 500
 #define _GNU_SOURCE
