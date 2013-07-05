@@ -22,4 +22,5 @@ make-bcache: CFLAGS += `pkg-config --cflags uuid blkid`
 make-bcache: bcache.o
 probe-bcache: LDLIBS += `pkg-config --libs uuid`
 bcache-super-show: LDLIBS += `pkg-config --libs uuid`
+bcache-super-show: CFLAGS += -std=gnu99
 bcache-super-show: bcache.o

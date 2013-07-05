@@ -4,6 +4,7 @@
  * GPLv2
  */
 
+
 #define _FILE_OFFSET_BITS	64
 #define __USE_FILE_OFFSET64
 #define _XOPEN_SOURCE 500
@@ -29,6 +30,29 @@
 static void usage()
 {
 	fprintf(stderr, "Usage: bcache-super-show [-f] <device>\n");
+}
+
+
+static bool accepted_char(char c)
+{
+	if ('0' <= c && c <= '9')
+		return true;
+	if ('A' <= c && c <= 'Z')
+		return true;
+	if ('a' <= c && c <= 'z')
+		return true;
+	if (strchr(".-_", c))
+		return true;
+	return false;
+}
+
+static void print_encode(char* in)
+{
+	for (char* pos = in; *pos; pos++)
+		if (accepted_char(*pos))
+			putchar(*pos);
+		else
+			printf("%%%x", *pos);
 }
 
 
@@ -121,6 +145,16 @@ int main(int argc, char **argv)
 			return 0;
 	}
 
+	putchar('\n');
+
+	char label[SB_LABEL_SIZE + 1];
+	strncpy(label, (char*)sb.label, SB_LABEL_SIZE);
+	label[SB_LABEL_SIZE] = '\0';
+	printf("dev.label\t\t");
+	if (*label)
+		print_encode(label);
+	else
+		printf("(empty)");
 	putchar('\n');
 
 	uuid_unparse(sb.uuid, uuid);
