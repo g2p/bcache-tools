@@ -269,6 +269,37 @@ static unsigned get_blocksize(const char *path)
 		exit(EXIT_FAILURE);
 	}
 
+	if (S_ISBLK(statbuf.st_mode)) {
+		/* check IO limits:
+		 * BLKALIGNOFF: alignment_offset
+		 * BLKPBSZGET: physical_block_size
+		 * BLKSSZGET: logical_block_size
+		 * BLKIOMIN: minimum_io_size
+		 * BLKIOOPT: optimal_io_size
+		 *
+		 * It may be tempting to use physical_block_size,
+		 * or even minimum_io_size.
+		 * But to be as transparent as possible,
+		 * we want to use logical_block_size.
+		 */
+		unsigned int logical_block_size;
+		int fd = open(path, O_RDONLY);
+
+		if (fd < 0) {
+			fprintf(stderr, "open(%s) failed: %m\n", path);
+			exit(EXIT_FAILURE);
+		}
+		if (ioctl(fd, BLKSSZGET, &logical_block_size)) {
+			fprintf(stderr, "ioctl(%s, BLKSSZGET) failed: %m\n", path);
+			exit(EXIT_FAILURE);
+		}
+		close(fd);
+		return logical_block_size / 512;
+
+	}
+	/* else: not a block device.
+	 * Why would we even want to write a bcache super block there? */
+
 	return statbuf.st_blksize / 512;
 }
 
