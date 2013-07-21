@@ -5,10 +5,15 @@ SUBSYSTEM!="block", GOTO="bcache_end"
 ACTION=="remove", GOTO="bcache_end"
 
 # Backing devices: scan, symlink, register
+IMPORT{program}="/sbin/blkid -o udev $tempnode"
+# blkid and probe-bcache can disagree, in which case don't register
+ENV{ID_FS_TYPE}=="?*", ENV{ID_FS_TYPE}!="bcache", GOTO="bcache_backing_end"
+
 IMPORT{program}="/sbin/probe-bcache -o udev $tempnode"
 ENV{ID_FS_UUID_ENC}=="?*", SYMLINK+="disk/by-uuid/$env{ID_FS_UUID_ENC}"
 SUBSYSTEM=="block", ACTION=="add|change", ENV{ID_FS_TYPE}=="bcache", \
         RUN+="bcache-register $tempnode"
+LABEL="bcache_backing_end"
 
 # Cached devices: symlink
 DRIVER=="bcache", ENV{CACHED_UUID}=="?*", \
