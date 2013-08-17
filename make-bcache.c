@@ -8,6 +8,7 @@
 #define __USE_FILE_OFFSET64
 #define _XOPEN_SOURCE 600
 
+#include <blkid.h>
 #include <ctype.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -76,19 +77,19 @@ unsigned hatoi_validate(const char *s, const char *msg)
 	uint64_t v = hatoi(s);
 
 	if (v & (v - 1)) {
-		printf("%s must be a power of two\n", msg);
+		fprintf(stderr, "%s must be a power of two\n", msg);
 		exit(EXIT_FAILURE);
 	}
 
 	v /= 512;
 
 	if (v > USHRT_MAX) {
-		printf("%s too large\n", msg);
+		fprintf(stderr, "%s too large\n", msg);
 		exit(EXIT_FAILURE);
 	}
 
 	if (!v) {
-		printf("%s too small\n", msg);
+		fprintf(stderr, "%s too small\n", msg);
 		exit(EXIT_FAILURE);
 	}
 
@@ -143,7 +144,8 @@ ssize_t read_string_list(const char *buf, const char * const list[])
 
 void usage()
 {
-	printf("Usage: make-bcache [options] device\n"
+	fprintf(stderr,
+		   "Usage: make-bcache [options] device\n"
 	       "	-C, --cache		Format a cache device\n"
 	       "	-B, --bdev		Format a backing device\n"
 	       "	-b, --bucket		bucket size\n"
@@ -166,17 +168,41 @@ const char * const cache_replacement_policies[] = {
 };
 
 static void write_sb(char *dev, unsigned block_size, unsigned bucket_size,
-		     bool writeback, bool discard,
+		     bool writeback, bool discard, bool wipe_bcache,
 		     unsigned cache_replacement_policy,
 		     uint64_t data_offset,
 		     uuid_t set_uuid, bool bdev)
 {
 	int fd;
-	char uuid_str[40], set_uuid_str[40];
+	char uuid_str[40], set_uuid_str[40], zeroes[SB_START] = {0};
 	struct cache_sb sb;
+	blkid_probe pr;
 
 	if ((fd = open(dev, O_RDWR|O_EXCL)) == -1) {
-		printf("Can't open dev %s: %s\n", dev, strerror(errno));
+		fprintf(stderr, "Can't open dev %s: %s\n", dev, strerror(errno));
+		exit(EXIT_FAILURE);
+	}
+
+	if (pread(fd, &sb, sizeof(sb), SB_START) != sizeof(sb))
+		exit(EXIT_FAILURE);
+
+	if (!memcmp(sb.magic, bcache_magic, 16) && !wipe_bcache) {
+		fprintf(stderr, "Already a bcache device on %s, "
+			"overwrite with --wipe-bcache\n", dev);
+		exit(EXIT_FAILURE);
+	}
+
+	if (!(pr = blkid_new_probe()))
+		exit(EXIT_FAILURE);
+	if (blkid_probe_set_device(pr, fd, 0, 0))
+		exit(EXIT_FAILURE);
+	/* enable ptable probing; superblock probing is enabled by default */
+	if (blkid_probe_enable_partitions(pr, true))
+		exit(EXIT_FAILURE);
+	if (!blkid_do_probe(pr)) {
+		/* XXX wipefs doesn't know how to remove partition tables */
+		fprintf(stderr, "Device %s already has a non-bcache superblock, "
+				"remove it using wipefs and wipefs -a\n", dev);
 		exit(EXIT_FAILURE);
 	}
 
@@ -221,7 +247,7 @@ static void write_sb(char *dev, unsigned block_size, unsigned bucket_size,
 		sb.first_bucket		= (23 / sb.bucket_size) + 1;
 
 		if (sb.nbuckets < 1 << 7) {
-			printf("Not enough buckets: %ju, need %u\n",
+			fprintf(stderr, "Not enough buckets: %ju, need %u\n",
 			       sb.nbuckets, 1 << 7);
 			exit(EXIT_FAILURE);
 		}
@@ -250,7 +276,13 @@ static void write_sb(char *dev, unsigned block_size, unsigned bucket_size,
 
 	sb.csum = csum_set(&sb);
 
-	if (pwrite(fd, &sb, sizeof(sb), SB_SECTOR << 9) != sizeof(sb)) {
+	/* Zero start of disk */
+	if (pwrite(fd, zeroes, SB_START, 0) != SB_START) {
+		perror("write error\n");
+		exit(EXIT_FAILURE);
+	}
+	/* Write superblock */
+	if (pwrite(fd, &sb, sizeof(sb), SB_START) != sizeof(sb)) {
 		perror("write error\n");
 		exit(EXIT_FAILURE);
 	}
@@ -311,7 +343,7 @@ int main(int argc, char **argv)
 	char *backing_devices[argc];
 
 	unsigned block_size = 0, bucket_size = 1024;
-	int writeback = 0, discard = 0;
+	int writeback = 0, discard = 0, wipe_bcache = 0;
 	unsigned cache_replacement_policy = 0;
 	uint64_t data_offset = BDEV_DATA_START_DEFAULT;
 	uuid_t set_uuid;
@@ -324,6 +356,7 @@ int main(int argc, char **argv)
 		{ "bucket",		1, NULL,	'b' },
 		{ "block",		1, NULL,	'w' },
 		{ "writeback",		0, &writeback,	1 },
+		{ "wipe-bcache",	0, &wipe_bcache,	1 },
 		{ "discard",		0, &discard,	1 },
 		{ "cache_replacement_policy", 1, NULL, 'p' },
 		{ "data_offset",	1, NULL,	'o' },
@@ -351,7 +384,7 @@ int main(int argc, char **argv)
 #if 0
 		case 'U':
 			if (uuid_parse(optarg, sb.uuid)) {
-				printf("Bad uuid\n");
+				fprintf(stderr, "Bad uuid\n");
 				exit(EXIT_FAILURE);
 			}
 			break;
@@ -363,14 +396,14 @@ int main(int argc, char **argv)
 		case 'o':
 			data_offset = atoll(optarg);
 			if (data_offset < BDEV_DATA_START_DEFAULT) {
-				printf("Bad data offset; minimum %d sectors\n",
+				fprintf(stderr, "Bad data offset; minimum %d sectors\n",
 				       BDEV_DATA_START_DEFAULT);
 				exit(EXIT_FAILURE);
 			}
 			break;
 		case 'u':
 			if (uuid_parse(optarg, set_uuid)) {
-				printf("Bad uuid\n");
+				fprintf(stderr, "Bad uuid\n");
 				exit(EXIT_FAILURE);
 			}
 			break;
@@ -379,7 +412,7 @@ int main(int argc, char **argv)
 			break;
 		case 1:
 			if (bdev == -1) {
-				printf("Please specify -C or -B\n");
+				fprintf(stderr, "Please specify -C or -B\n");
 				exit(EXIT_FAILURE);
 			}
 
@@ -391,12 +424,12 @@ int main(int argc, char **argv)
 		}
 
 	if (!ncache_devices && !nbacking_devices) {
-		printf("Please supply a device\n");
+		fprintf(stderr, "Please supply a device\n");
 		usage();
 	}
 
 	if (bucket_size < block_size) {
-		printf("Bucket size cannot be smaller than block size\n");
+		fprintf(stderr, "Bucket size cannot be smaller than block size\n");
 		exit(EXIT_FAILURE);
 	}
 
@@ -412,12 +445,14 @@ int main(int argc, char **argv)
 
 	for (i = 0; i < ncache_devices; i++)
 		write_sb(cache_devices[i], block_size, bucket_size,
-			 writeback, discard, cache_replacement_policy,
+			 writeback, discard, wipe_bcache,
+			 cache_replacement_policy,
 			 data_offset, set_uuid, false);
 
 	for (i = 0; i < nbacking_devices; i++)
 		write_sb(backing_devices[i], block_size, bucket_size,
-			 writeback, discard, cache_replacement_policy,
+			 writeback, discard, wipe_bcache,
+			 cache_replacement_policy,
 			 data_offset, set_uuid, true);
 
 	return 0;

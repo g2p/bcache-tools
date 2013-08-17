@@ -16,9 +16,10 @@ install: make-bcache probe-bcache bcache-super-show
 clean:
 	$(RM) -f make-bcache probe-bcache bcache-super-show bcache-test *.o
 
-bcache-test: LDLIBS += -lm -lssl -lcrypto
-make-bcache: LDLIBS += -luuid
+bcache-test: LDLIBS += `pkg-config --libs openssl`
+make-bcache: LDLIBS += `pkg-config --libs uuid blkid`
+make-bcache: CFLAGS += `pkg-config --cflags uuid blkid`
 make-bcache: bcache.o
-probe-bcache: LDLIBS += -luuid
-bcache-super-show: LDLIBS += -luuid
+probe-bcache: LDLIBS += `pkg-config --libs uuid`
+bcache-super-show: LDLIBS += `pkg-config --libs uuid`
 bcache-super-show: bcache.o

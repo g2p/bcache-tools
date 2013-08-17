@@ -52,7 +52,7 @@ int main(int argc, char **argv)
 			continue;
 
 
-		if (pread(fd, &sb, sizeof(sb), 4096) != sizeof(sb))
+		if (pread(fd, &sb, sizeof(sb), SB_START) != sizeof(sb))
 			continue;
 
 		if (memcmp(sb.magic, bcache_magic, 16))
