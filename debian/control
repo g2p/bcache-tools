@@ -3,7 +3,7 @@ Maintainer: Tom Strickx <tstrickx@rootcu.be>
 Section: utils
 Priority: optional
 Standards-Version: 3.9.4.0
-Build-Depends: debhelper (>= 9), uuid-dev
+Build-Depends: debhelper (>= 9), pkg-config, uuid-dev, libblkid-dev
 
 Package: bcache-tools
 Architecture: any
