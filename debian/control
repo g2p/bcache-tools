@@ -6,7 +6,7 @@ Standards-Version: 3.9.4.0
 Build-Depends: debhelper (>= 9), pkg-config, uuid-dev, libblkid-dev
 
 Package: bcache-tools
-Architecture: any
+Architecture: linux-any
 Depends: ${shlibs:Depends}, ${misc:Depends}
 Description: These are the userspace tools required for bcache.
  Bcache allows the use of SSDs to cache other block
