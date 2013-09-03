@@ -1,3 +1,9 @@
+bcache-tools (1.0-3) raring; urgency=low
+
+  * Upstream some changes, depend on libblkid and pkg-config, refresh the metadata.
+
+ -- Gabriel de Perthuis <g2p.code+debian@gmail.com>  Tue, 03 Sep 2013 19:26:20 +0200
+
 bcache-tools (1.0-1) unstable; urgency=low
 
   * Initial release. (Closes: #708132)
