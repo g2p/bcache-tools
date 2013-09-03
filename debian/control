@@ -1,5 +1,6 @@
 Source: bcache-tools
 Maintainer: Tom Strickx <tstrickx@rootcu.be>
+Uploaders: Gabriel de Perthuis <g2p.code+debian@gmail.com>
 Section: utils
 Priority: optional
 Standards-Version: 3.9.4
