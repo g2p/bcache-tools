@@ -5,6 +5,8 @@ Section: utils
 Priority: optional
 Standards-Version: 3.9.4
 Build-Depends: debhelper (>= 9), pkg-config, uuid-dev, libblkid-dev
+Vcs-Browser: https://github.com/g2p/bcache-tools
+Vcs-Git: https://github.com/g2p/bcache-tools.git
 
 Package: bcache-tools
 Architecture: linux-any
