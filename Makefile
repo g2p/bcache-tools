@@ -9,7 +9,7 @@ install: make-bcache probe-bcache bcache-super-show
 	install -m0755 probe-bcache	$(DESTDIR)/sbin/
 	install -m0644 61-bcache.rules	$(DESTDIR)/lib/udev/rules.d/
 	install -m0755 bcache-register	$(DESTDIR)/lib/udev/
-	-install -m0755 initramfs/hook	$(DESTDIR)/etc/initramfs-tools/hooks/bcache
+	-install -m0755 initramfs/hook	$(DESTDIR)/usr/share/initramfs-tools/hooks/bcache
 	install -m0644 -- *.8 $(DESTDIR)${PREFIX}/share/man/man8
 #	install -m0755 bcache-test $(DESTDIR)${PREFIX}/sbin/
 
