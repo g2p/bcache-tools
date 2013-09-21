@@ -3,4 +3,5 @@
 	dh $@
 
 override_dh_auto_install:
+	mkdir -p /usr/share/initramfs-tools/hooks
 	$(MAKE) DESTDIR=$$(pwd)/debian/bcache-tools prefix=/usr install

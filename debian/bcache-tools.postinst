@@ -1,0 +1,13 @@
+#!/bin/sh
+set -e
+dpkg-maintscript-helper rm_conffile /etc/initramfs-tools/hooks/bcache 1.0.1-1~ -- "$@"
+
+case "$1" in
+    configure)
+        update-initramfs -u
+    ;;
+esac
+
+#DEBHELPER#
+
+exit 0

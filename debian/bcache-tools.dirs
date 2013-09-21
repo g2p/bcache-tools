@@ -2,4 +2,4 @@ usr/sbin/
 sbin/
 lib/udev/rules.d/
 usr/share/man/man8
-etc/initramfs-tools/hooks/
+usr/share/initramfs-tools/hooks/

@@ -10,7 +10,7 @@ Vcs-Git: https://github.com/g2p/bcache-tools.git
 
 Package: bcache-tools
 Architecture: linux-any
-Depends: ${shlibs:Depends}, ${misc:Depends}
+Depends: ${shlibs:Depends}, ${misc:Depends}, initramfs-tools
 Homepage: http://bcache.evilpiepirate.org/
 Description: bcache userspace tools
  Bcache allows the use of SSDs to cache other block devices.
