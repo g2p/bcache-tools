@@ -1,3 +1,10 @@
+bcache-tools (1.0.1-1) raring; urgency=low
+
+  * Use the absolute path to modprobe
+  * initramfs: Move hook to /usr/share, trigger a rebuild
+
+ -- Gabriel de Perthuis <g2p.code+debian@gmail.com>  Sun, 22 Sep 2013 01:16:40 +0200
+
 bcache-tools (1.0-3) raring; urgency=low
 
   * Upstream some changes, depend on libblkid and pkg-config, refresh the metadata.
