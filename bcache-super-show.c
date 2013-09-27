@@ -136,13 +136,31 @@ int main(int argc, char **argv)
 		printf("dev.cache.first_sector\t%u\n"
 		       "dev.cache.cache_sectors\t%ju\n"
 		       "dev.cache.total_sectors\t%ju\n"
+		       "dev.cache.ordered\t%s\n"
 		       "dev.cache.discard\t%s\n"
-		       "dev.cache.pos\t\t%u\n",
+		       "dev.cache.pos\t\t%u\n"
+		       "dev.cache.replacement\t%ju",
 		       sb.bucket_size * sb.first_bucket,
 		       sb.bucket_size * (sb.nbuckets - sb.first_bucket),
 		       sb.bucket_size * sb.nbuckets,
+		       CACHE_SYNC(&sb) ? "yes" : "no",
 		       CACHE_DISCARD(&sb) ? "yes" : "no",
-		       sb.nr_this_dev);
+		       sb.nr_this_dev,
+			   CACHE_REPLACEMENT(&sb));
+		switch (CACHE_REPLACEMENT(&sb)) {
+			case CACHE_REPLACEMENT_LRU:
+				printf(" [lru]\n");
+				break;
+			case CACHE_REPLACEMENT_FIFO:
+				printf(" [fifo]\n");
+				break;
+			case CACHE_REPLACEMENT_RANDOM:
+				printf(" [random]\n");
+				break;
+			default:
+				putchar('\n');
+		}
+
 	} else {
 		uint64_t first_sector;
 		if (sb.version == BCACHE_SB_VERSION_BDEV) {
