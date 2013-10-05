@@ -16,7 +16,7 @@ esac
 
 . /usr/share/initramfs-tools/hook-functions
 
-cp -pt "${DESTDIR}/lib/udev/rules.d" /lib/udev/rules.d/61-bcache.rules
+cp -pt "${DESTDIR}/lib/udev/rules.d" /lib/udev/rules.d/69-bcache.rules
 copy_exec /lib/udev/bcache-register
 copy_exec /sbin/probe-bcache
 manual_add_modules bcache
