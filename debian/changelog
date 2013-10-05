@@ -1,3 +1,11 @@
+bcache-tools (1.0.2-1) raring; urgency=low
+
+  * udev: Fit into the standard rule sequence
+  * super-show: Print label
+  * super-show: Show sync mode and cache replacement policy
+
+ -- Gabriel de Perthuis <g2p.code+debian@gmail.com>  Sat, 05 Oct 2013 22:24:25 +0200
+
 bcache-tools (1.0.1-1) raring; urgency=low
 
   * Use the absolute path to modprobe
