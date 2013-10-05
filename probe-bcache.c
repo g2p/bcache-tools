@@ -8,6 +8,7 @@
 #define __USE_FILE_OFFSET64
 #define _XOPEN_SOURCE 500
 
+#include <blkid.h>
 #include <fcntl.h>
 #include <linux/fs.h>
 #include <stdbool.h>
@@ -30,6 +31,7 @@ int main(int argc, char **argv)
 	extern char *optarg;
 	struct cache_sb sb;
 	char uuid[40];
+	blkid_probe pr;
 
 	while ((o = getopt(argc, argv, "o:")) != EOF)
 		switch (o) {
@@ -51,6 +53,18 @@ int main(int argc, char **argv)
 		if (fd == -1)
 			continue;
 
+		if (!(pr = blkid_new_probe()))
+			continue;
+		if (blkid_probe_set_device(pr, fd, 0, 0))
+			continue;
+		/* probe partitions too */
+		if (blkid_probe_enable_partitions(pr, true))
+			continue;
+		/* bail if anything was found
+		 * probe-bcache isn't needed once blkid recognizes bcache */
+		if (!blkid_do_probe(pr)) {
+			continue;
+		}
 
 		if (pread(fd, &sb, sizeof(sb), SB_START) != sizeof(sb))
 			continue;

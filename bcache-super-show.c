@@ -4,6 +4,7 @@
  * GPLv2
  */
 
+
 #define _FILE_OFFSET_BITS	64
 #define __USE_FILE_OFFSET64
 #define _XOPEN_SOURCE 500
@@ -29,6 +30,29 @@
 static void usage()
 {
 	fprintf(stderr, "Usage: bcache-super-show [-f] <device>\n");
+}
+
+
+static bool accepted_char(char c)
+{
+	if ('0' <= c && c <= '9')
+		return true;
+	if ('A' <= c && c <= 'Z')
+		return true;
+	if ('a' <= c && c <= 'z')
+		return true;
+	if (strchr(".-_", c))
+		return true;
+	return false;
+}
+
+static void print_encode(char* in)
+{
+	for (char* pos = in; *pos; pos++)
+		if (accepted_char(*pos))
+			putchar(*pos);
+		else
+			printf("%%%x", *pos);
 }
 
 
@@ -123,6 +147,16 @@ int main(int argc, char **argv)
 
 	putchar('\n');
 
+	char label[SB_LABEL_SIZE + 1];
+	strncpy(label, (char*)sb.label, SB_LABEL_SIZE);
+	label[SB_LABEL_SIZE] = '\0';
+	printf("dev.label\t\t");
+	if (*label)
+		print_encode(label);
+	else
+		printf("(empty)");
+	putchar('\n');
+
 	uuid_unparse(sb.uuid, uuid);
 	printf("dev.uuid\t\t%s\n", uuid);
 
@@ -136,13 +170,31 @@ int main(int argc, char **argv)
 		printf("dev.cache.first_sector\t%u\n"
 		       "dev.cache.cache_sectors\t%ju\n"
 		       "dev.cache.total_sectors\t%ju\n"
+		       "dev.cache.ordered\t%s\n"
 		       "dev.cache.discard\t%s\n"
-		       "dev.cache.pos\t\t%u\n",
+		       "dev.cache.pos\t\t%u\n"
+		       "dev.cache.replacement\t%ju",
 		       sb.bucket_size * sb.first_bucket,
 		       sb.bucket_size * (sb.nbuckets - sb.first_bucket),
 		       sb.bucket_size * sb.nbuckets,
+		       CACHE_SYNC(&sb) ? "yes" : "no",
 		       CACHE_DISCARD(&sb) ? "yes" : "no",
-		       sb.nr_this_dev);
+		       sb.nr_this_dev,
+			   CACHE_REPLACEMENT(&sb));
+		switch (CACHE_REPLACEMENT(&sb)) {
+			case CACHE_REPLACEMENT_LRU:
+				printf(" [lru]\n");
+				break;
+			case CACHE_REPLACEMENT_FIFO:
+				printf(" [fifo]\n");
+				break;
+			case CACHE_REPLACEMENT_RANDOM:
+				printf(" [random]\n");
+				break;
+			default:
+				putchar('\n');
+		}
+
 	} else {
 		uint64_t first_sector;
 		if (sb.version == BCACHE_SB_VERSION_BDEV) {

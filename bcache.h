@@ -115,7 +115,7 @@ BITMASK(BDEV_STATE,		struct cache_sb, flags, 61, 2);
 #define BDEV_STATE_DIRTY	2U
 #define BDEV_STATE_STALE	3U
 
-inline uint64_t crc64(const void *_data, size_t len);
+uint64_t crc64(const void *_data, size_t len);
 
 #define node(i, j)		((void *) ((i)->d + (j)))
 #define end(i)			node(i, (i)->keys)
