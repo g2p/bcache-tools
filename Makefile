@@ -1,6 +1,7 @@
 
 PREFIX=/usr
 UDEVLIBDIR=/lib/udev
+DRACUTLIBDIR=/lib/dracut
 CFLAGS+=-O2 -Wall -g
 
 all: make-bcache probe-bcache bcache-super-show
@@ -10,8 +11,8 @@ install: make-bcache probe-bcache bcache-super-show
 	install -m0755 probe-bcache bcache-register		$(DESTDIR)$(UDEVLIBDIR)/
 	install -m0644 69-bcache.rules	$(DESTDIR)$(UDEVLIBDIR)/rules.d/
 	-install -T -m0755 initramfs/hook	$(DESTDIR)/usr/share/initramfs-tools/hooks/bcache
-	if [ -d $(DESTDIR)/lib/dracut/modules.d ]; \
-	then install -D -m0755 dracut/module-setup.sh $(DESTDIR)/lib/dracut/modules.d/90bcache/module-setup.sh; \
+	if [ -d $(DESTDIR)$(DRACUTLIBDIR)/modules.d ]; \
+	then install -D -m0755 dracut/module-setup.sh $(DESTDIR)$(DRACUTLIBDIR)/modules.d/90bcache/module-setup.sh; \
 	fi
 	install -m0644 -- *.8 $(DESTDIR)${PREFIX}/share/man/man8/
 #	install -m0755 bcache-test $(DESTDIR)${PREFIX}/sbin/
