@@ -11,7 +11,7 @@ ENV{ID_FS_TYPE}=="bcache", GOTO="bcache_backing_found"
 ENV{ID_FS_TYPE}=="?*", GOTO="bcache_backing_end"
 
 # Backing devices: scan, symlink, register
-IMPORT{program}="/sbin/probe-bcache -o udev $tempnode"
+IMPORT{program}="probe-bcache -o udev $tempnode"
 ENV{ID_FS_TYPE}!="bcache", GOTO="bcache_backing_end"
 ENV{ID_FS_UUID_ENC}=="?*", SYMLINK+="disk/by-uuid/$env{ID_FS_UUID_ENC}"
 
