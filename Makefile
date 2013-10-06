@@ -1,14 +1,14 @@
 
 PREFIX=/usr
+UDEVLIBDIR=/lib/udev
 CFLAGS+=-O2 -Wall -g
 
 all: make-bcache probe-bcache bcache-super-show
 
 install: make-bcache probe-bcache bcache-super-show
 	install -m0755 make-bcache bcache-super-show	$(DESTDIR)${PREFIX}/sbin/
-	install -m0755 probe-bcache	$(DESTDIR)/sbin/
-	install -m0644 69-bcache.rules	$(DESTDIR)/lib/udev/rules.d/
-	install -m0755 bcache-register	$(DESTDIR)/lib/udev/
+	install -m0755 probe-bcache bcache-register		$(DESTDIR)$(UDEVLIBDIR)/
+	install -m0644 69-bcache.rules	$(DESTDIR)$(UDEVLIBDIR)/rules.d/
 	-install -T -m0755 initramfs/hook	$(DESTDIR)/usr/share/initramfs-tools/hooks/bcache
 	install -m0644 -- *.8 $(DESTDIR)${PREFIX}/share/man/man8/
 #	install -m0755 bcache-test $(DESTDIR)${PREFIX}/sbin/
