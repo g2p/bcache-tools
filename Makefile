@@ -2,20 +2,21 @@
 PREFIX=/usr
 UDEVLIBDIR=/lib/udev
 DRACUTLIBDIR=/lib/dracut
+INSTALL=install
 CFLAGS+=-O2 -Wall -g
 
 all: make-bcache probe-bcache bcache-super-show
 
 install: make-bcache probe-bcache bcache-super-show
-	install -m0755 make-bcache bcache-super-show	$(DESTDIR)${PREFIX}/sbin/
-	install -m0755 probe-bcache bcache-register		$(DESTDIR)$(UDEVLIBDIR)/
-	install -m0644 69-bcache.rules	$(DESTDIR)$(UDEVLIBDIR)/rules.d/
-	-install -T -m0755 initramfs/hook	$(DESTDIR)/usr/share/initramfs-tools/hooks/bcache
+	$(INSTALL) -m0755 make-bcache bcache-super-show	$(DESTDIR)${PREFIX}/sbin/
+	$(INSTALL) -m0755 probe-bcache bcache-register		$(DESTDIR)$(UDEVLIBDIR)/
+	$(INSTALL) -m0644 69-bcache.rules	$(DESTDIR)$(UDEVLIBDIR)/rules.d/
+	-$(INSTALL) -T -m0755 initramfs/hook	$(DESTDIR)/usr/share/initramfs-tools/hooks/bcache
 	if [ -d $(DESTDIR)$(DRACUTLIBDIR)/modules.d ]; \
-	then install -D -m0755 dracut/module-setup.sh $(DESTDIR)$(DRACUTLIBDIR)/modules.d/90bcache/module-setup.sh; \
+	then $(INSTALL) -D -m0755 dracut/module-setup.sh $(DESTDIR)$(DRACUTLIBDIR)/modules.d/90bcache/module-setup.sh; \
 	fi
-	install -m0644 -- *.8 $(DESTDIR)${PREFIX}/share/man/man8/
-#	install -m0755 bcache-test $(DESTDIR)${PREFIX}/sbin/
+	$(INSTALL) -m0644 -- *.8 $(DESTDIR)${PREFIX}/share/man/man8/
+#	$(INSTALL) -m0755 bcache-test $(DESTDIR)${PREFIX}/sbin/
 
 clean:
 	$(RM) -f make-bcache probe-bcache bcache-super-show bcache-test *.o
