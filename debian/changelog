@@ -1,3 +1,9 @@
+bcache-tools (1.0.3-1) raring; urgency=low
+
+  * Move probe-bcache to /lib/udev
+
+ -- Gabriel de Perthuis <g2p.code+debian@gmail.com>  Mon, 07 Oct 2013 19:29:28 +0200
+
 bcache-tools (1.0.2-1) raring; urgency=low
 
   * udev: Fit into the standard rule sequence
