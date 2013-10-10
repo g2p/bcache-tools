@@ -16,8 +16,7 @@ ENV{ID_FS_TYPE}!="bcache", GOTO="bcache_backing_end"
 ENV{ID_FS_UUID_ENC}=="?*", SYMLINK+="disk/by-uuid/$env{ID_FS_UUID_ENC}"
 
 LABEL="bcache_backing_found"
-SUBSYSTEM=="block", ACTION=="add|change", ENV{ID_FS_TYPE}=="bcache", \
-        RUN+="bcache-register $tempnode"
+ACTION=="add|change", RUN+="bcache-register $tempnode"
 LABEL="bcache_backing_end"
 
 # Cached devices: symlink
