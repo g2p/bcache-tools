@@ -1,4 +1,4 @@
-bcache-tools (1.0.4-1) raring; urgency=low
+bcache-tools (1.0.4-1) unstable; urgency=low
 
   * udev: Simplify 69-bcache.rules
   * udev: Skip DM devices marked private
