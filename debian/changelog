@@ -1,3 +1,10 @@
+bcache-tools (1.0.4-1) raring; urgency=low
+
+  * udev: Simplify 69-bcache.rules
+  * udev: Skip DM devices marked private
+
+ -- Gabriel de Perthuis <g2p.code+debian@gmail.com>  Wed, 16 Oct 2013 14:19:34 +0200
+
 bcache-tools (1.0.3-1) raring; urgency=low
 
   * Move probe-bcache to /lib/udev
