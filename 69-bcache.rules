@@ -3,6 +3,7 @@
 
 SUBSYSTEM!="block", GOTO="bcache_end"
 ACTION=="remove", GOTO="bcache_end"
+ENV{DM_UDEV_DISABLE_OTHER_RULES_FLAG}=="1", GOTO="bcache_end"
 
 # blkid was run by the standard udev rules
 # It recognised bcache (util-linux 2.24+)
@@ -16,8 +17,7 @@ ENV{ID_FS_TYPE}!="bcache", GOTO="bcache_backing_end"
 ENV{ID_FS_UUID_ENC}=="?*", SYMLINK+="disk/by-uuid/$env{ID_FS_UUID_ENC}"
 
 LABEL="bcache_backing_found"
-SUBSYSTEM=="block", ACTION=="add|change", ENV{ID_FS_TYPE}=="bcache", \
-        RUN+="bcache-register $tempnode"
+RUN+="bcache-register $tempnode"
 LABEL="bcache_backing_end"
 
 # Cached devices: symlink
