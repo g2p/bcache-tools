@@ -1,4 +1,4 @@
-bcache-tools (1.0.7-1) trusty; urgency=low
+bcache-tools (1.0.7-1) unstable; urgency=low
 
   * Do not build bcache-test (requires OpenSSL)
 
