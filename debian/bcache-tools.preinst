@@ -1,2 +1,23 @@
-dpkg-maintscript-helper rm_conffile /etc/initramfs-tools/hooks/bcache 1.0.1-1~ -- "$@"
+oldscript=/etc/initramfs-tools/hooks/bcache
+dpkg-maintscript-helper rm_conffile $oldscript 1.0.1-1~ -- "$@"
+case "$1" in
+    install|upgrade)
+        if [ -f $oldscript ]; then
+            for hash in ca5a1c3f716e3ec69057f657cb79cee2f47c7ef6619983d86e647ac1f9f1f099 \
+                74c5338e21c926d3cbbc1b44c5525667dc964fe91189ffa6b11352974ef56950
+            do
+                if echo "$hash  $oldscript" |
+                   sha256sum --check --status -; then
+                    # Old conffile was not modified, let's just remove it
+                    rm -f $oldscript
+                fi
+            done
+            if [ -f $oldscript ]; then
+                # Otherwise, disable and rename it
+                chmod -x $oldscript
+                mv $oldscript $oldscript.dpkg-remove
+            fi
+        fi
+        ;;
+esac
 #DEBHELPER#
