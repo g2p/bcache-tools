@@ -1,17 +1,17 @@
 Source: bcache-tools
-Maintainer: Tom Strickx <tstrickx@rootcu.be>
-Uploaders: Gabriel de Perthuis <g2p.code+debian@gmail.com>
+Maintainer: Gabriel de Perthuis <g2p.code+debian@gmail.com>
+Uploaders: Tom Strickx <tstrickx@rootcu.be>
 Section: utils
 Priority: optional
 Standards-Version: 3.9.4
 Build-Depends: debhelper (>= 9), pkg-config, uuid-dev, libblkid-dev
+Homepage: http://bcache.evilpiepirate.org/
 Vcs-Browser: https://github.com/g2p/bcache-tools
 Vcs-Git: https://github.com/g2p/bcache-tools.git
 
 Package: bcache-tools
 Architecture: linux-any
 Depends: ${shlibs:Depends}, ${misc:Depends}, initramfs-tools
-Homepage: http://bcache.evilpiepirate.org/
 Description: bcache userspace tools
  Bcache allows the use of SSDs to cache other block devices.
  .
