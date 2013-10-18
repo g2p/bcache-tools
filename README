@@ -5,7 +5,7 @@ devices. For more information, see http://bcache.evilpiepirate.org.
 Documentation for the run time interface is included in the kernel tree, in
 Documentantion/bcache.txt.
 
-Included tools:
+Included:
 
 make-bcache
 Formats a block device for use with bcache. A device can be formatted for use
@@ -17,11 +17,22 @@ performance. The bucket size is intended to be equal to the size of your SSD's
 erase blocks, which seems to be 128k-512k for most SSDs; feel free to
 experiment.
 
-probe-bcache
-Only necessary until support for the bcache superblock is included
-in blkid; in the meantime, provides just enough functionality for a udev script
-to create the /dev/disk/by-uuid symlink. The arguments it does support are the
-same as for blkid.
-
 bcache-super-show
 Prints the bcache superblock of a cache device or a backing device.
+
+
+Udev rules
+The first half of the rules do auto-assembly and add uuid symlinks
+to cache and backing devices.  If util-linux's libblkid is
+sufficiently recent (2.24) the rules will take advantage of
+the fact that bcache has already been detected.  Otherwise
+they call a small probe-bcache program that imitates blkid.
+
+The second half of the rules add symlinks to cached devices,
+which are the devices created by the bcache kernel module.
+
+
+Initramfs support
+Currently initramfs-tools, mkinitcpio and dracut are supported.
+
+
