@@ -5,7 +5,7 @@ DRACUTLIBDIR=/lib/dracut
 INSTALL=install
 CFLAGS+=-O2 -Wall -g
 
-all: make-bcache probe-bcache bcache-super-show
+all: make-bcache probe-bcache bcache-super-show bcache-test
 
 install: make-bcache probe-bcache bcache-super-show
 	$(INSTALL) -m0755 make-bcache bcache-super-show	$(DESTDIR)${PREFIX}/sbin/
@@ -20,7 +20,7 @@ install: make-bcache probe-bcache bcache-super-show
 clean:
 	$(RM) -f make-bcache probe-bcache bcache-super-show bcache-test *.o
 
-bcache-test: LDLIBS += `pkg-config --libs openssl`
+bcache-test: LDLIBS += `pkg-config --libs openssl` -lm
 make-bcache: LDLIBS += `pkg-config --libs uuid blkid`
 make-bcache: CFLAGS += `pkg-config --cflags uuid blkid`
 make-bcache: bcache.o
