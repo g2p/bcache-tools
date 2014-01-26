@@ -1,5 +1,6 @@
-bcache-super-show
-make-bcache
-probe-bcache
+/bcache-super-show
+/bcache-test
+/make-bcache
+/probe-bcache
 .*
-*.o
+/*.o
