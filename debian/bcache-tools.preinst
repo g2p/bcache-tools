@@ -1,3 +1,4 @@
+#!/bin/sh
 oldscript=/etc/initramfs-tools/hooks/bcache
 dpkg-maintscript-helper rm_conffile $oldscript 1.0.1-1~ -- "$@"
 case "$1" in
