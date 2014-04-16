@@ -366,7 +366,7 @@ int main(int argc, char **argv)
 	};
 
 	while ((c = getopt_long(argc, argv,
-				"-hCBU:w:b:",
+				"-hCBUo:w:b:",
 				opts, NULL)) != -1)
 		switch (c) {
 		case 'C':
