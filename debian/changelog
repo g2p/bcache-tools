@@ -1,3 +1,9 @@
+bcache-tools (1.0.7-1) trusty; urgency=low
+
+  * Do not build bcache-test (requires OpenSSL)
+
+ -- Gabriel de Perthuis <g2p.code+debian@gmail.com>  Sat, 10 May 2014 15:40:15 +0200
+
 bcache-tools (1.0.6-1) trusty; urgency=low
 
   * udev: Skip floppies and cdroms
