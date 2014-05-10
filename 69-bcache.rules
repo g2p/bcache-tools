@@ -3,7 +3,6 @@
 
 SUBSYSTEM!="block", GOTO="bcache_end"
 ACTION=="remove", GOTO="bcache_end"
-DRIVERS=="floppy", GOTO="bcache_end"
 ENV{DM_UDEV_DISABLE_OTHER_RULES_FLAG}=="1", GOTO="bcache_end"
 
 # blkid was run by the standard udev rules
@@ -11,6 +10,8 @@ ENV{DM_UDEV_DISABLE_OTHER_RULES_FLAG}=="1", GOTO="bcache_end"
 ENV{ID_FS_TYPE}=="bcache", GOTO="bcache_backing_found"
 # It recognised something else; bail
 ENV{ID_FS_TYPE}=="?*", GOTO="bcache_backing_end"
+# Explicitly bail out for floppy drives (< util-linux-2.24)
+DRIVERS=="floppy", GOTO="bcache_end"
 
 # Backing devices: scan, symlink, register
 IMPORT{program}="probe-bcache -o udev $tempnode"
