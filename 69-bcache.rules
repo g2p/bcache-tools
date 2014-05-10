@@ -4,6 +4,7 @@
 SUBSYSTEM!="block", GOTO="bcache_end"
 ACTION=="remove", GOTO="bcache_end"
 ENV{DM_UDEV_DISABLE_OTHER_RULES_FLAG}=="1", GOTO="bcache_end"
+KERNEL=="fd*|sr*", GOTO="bcache_end"
 
 # blkid was run by the standard udev rules
 # It recognised bcache (util-linux 2.24+)

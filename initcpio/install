@@ -1,0 +1,14 @@
+#!/bin/bash
+build() {
+    add_module bcache
+    add_binary /usr/lib/udev/bcache-register
+    add_binary /usr/lib/udev/probe-bcache
+    add_file /usr/lib/udev/rules.d/69-bcache.rules
+}
+help() {
+    cat <<HELPEOF
+This hook will auto-assemble bcache devices.
+Requires the udev hook.
+HELPEOF
+}
+

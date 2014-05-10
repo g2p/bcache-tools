@@ -359,14 +359,16 @@ int main(int argc, char **argv)
 		{ "wipe-bcache",	0, &wipe_bcache,	1 },
 		{ "discard",		0, &discard,	1 },
 		{ "cache_replacement_policy", 1, NULL, 'p' },
+		{ "cache-replacement-policy", 1, NULL, 'p' },
 		{ "data_offset",	1, NULL,	'o' },
+		{ "data-offset",	1, NULL,	'o' },
 		{ "cset-uuid",		1, NULL,	'u' },
 		{ "help",		0, NULL,	'h' },
 		{ NULL,			0, NULL,	0 },
 	};
 
 	while ((c = getopt_long(argc, argv,
-				"-hCBU:w:b:",
+				"-hCBUo:w:b:",
 				opts, NULL)) != -1)
 		switch (c) {
 		case 'C':
