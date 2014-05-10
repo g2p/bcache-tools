@@ -3,7 +3,7 @@ These are the userspace tools required for bcache.
 Bcache is a patch for the Linux kernel to use SSDs to cache other block
 devices. For more information, see http://bcache.evilpiepirate.org.
 Documentation for the run time interface is included in the kernel tree, in
-Documentantion/bcache.txt.
+Documentation/bcache.txt.
 
 Included:
 
