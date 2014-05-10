@@ -3,7 +3,7 @@ Maintainer: Gabriel de Perthuis <g2p.code+debian@gmail.com>
 Uploaders: Tom Strickx <tstrickx@rootcu.be>
 Section: utils
 Priority: optional
-Standards-Version: 3.9.4
+Standards-Version: 3.9.5
 Build-Depends: debhelper (>= 9), pkg-config, uuid-dev, libblkid-dev
 Homepage: http://bcache.evilpiepirate.org/
 Vcs-Browser: https://github.com/g2p/bcache-tools
