@@ -1,4 +1,0 @@
-#!/bin/sh
-/sbin/modprobe -qba bcache
-test -f /sys/fs/bcache/register_quiet && echo "$1" > /sys/fs/bcache/register_quiet
-
