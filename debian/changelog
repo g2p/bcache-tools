@@ -1,3 +1,10 @@
+bcache-tools (1.0.8-1) trusty; urgency=low
+
+  * Replace bcache-register with native c code; thanks Simon Gomizelj
+  * Build for trusty first, now that it's the earliest supported release
+
+ -- Gabriel de Perthuis <g2p.code+debian@gmail.com>  Thu, 04 Dec 2014 20:55:42 +0100
+
 bcache-tools (1.0.7-2) saucy; urgency=low
 
   * Build for saucy first so that packages can be copied to trusty as-is
