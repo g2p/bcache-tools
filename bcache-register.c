@@ -18,10 +18,10 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    fd = open("/sys/fs/bcache/register_quiet", O_WRONLY);
+    fd = open("/sys/fs/bcache/register", O_WRONLY);
     if (fd < 0)
     {
-        perror("Error opening /sys/fs/bcache/register_quiet");
+        perror("Error opening /sys/fs/bcache/register");
         fprintf(stderr, "The bcache kernel module must be loaded\n");
         return 1;
     }
