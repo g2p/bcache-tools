@@ -15,6 +15,7 @@ install: make-bcache probe-bcache bcache-super-show
 	$(INSTALL) -D -m0755 initramfs/hook	$(DESTDIR)/usr/share/initramfs-tools/hooks/bcache
 	$(INSTALL) -D -m0755 initcpio/install	$(DESTDIR)/usr/lib/initcpio/install/bcache
 	$(INSTALL) -D -m0755 dracut/module-setup.sh $(DESTDIR)$(DRACUTLIBDIR)/modules.d/90bcache/module-setup.sh
+	$(INSTALL) -D -m0755 dracut/parse-bcache.sh $(DESTDIR)$(DRACUTLIBDIR)/modules.d/90bcache/parse-bcache.sh
 #	$(INSTALL) -m0755 bcache-test $(DESTDIR)${PREFIX}/sbin/
 
 clean:
