@@ -29,6 +29,7 @@ installkernel() {
 }
 
 install() {
-    inst_multiple ${udevdir}/probe-bcache ${udevdir}/bcache-register
+    inst_multiple ${udevdir}/bcache-register
     inst_rules 69-bcache.rules
+    inst_hook pre-mount 90 "$moddir/parse-bcache.sh"
 }
