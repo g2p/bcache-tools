@@ -22,11 +22,14 @@ RUN{builtin}+="kmod load bcache"
 RUN+="bcache-register $tempnode"
 LABEL="bcache_backing_end"
 
-# Cached devices: symlink
-DRIVER=="bcache", ENV{CACHED_UUID}=="?*", \
-        SYMLINK+="bcache/by-uuid/$env{CACHED_UUID}"
-DRIVER=="bcache", ENV{CACHED_LABEL}=="?*", \
-        SYMLINK+="bcache/by-label/$env{CACHED_LABEL}"
+# Handling of cached devices
+DRIVER!="bcache", GOTO="bcache_end"
+
+# Apply kernel cmdline parameters
+RUN+="bcache-params $kernel"
+# Symlink
+ENV{CACHED_UUID}=="?*", SYMLINK+="bcache/by-uuid/$env{CACHED_UUID}"
+ENV{CACHED_LABEL}=="?*", SYMLINK+="bcache/by-label/$env{CACHED_LABEL}"
 
 LABEL="bcache_end"
 
