@@ -7,7 +7,7 @@ CFLAGS+=-O2 -Wall -g
 
 all: make-bcache probe-bcache bcache-super-show bcache-register
 
-install: make-bcache probe-bcache bcache-super-show
+install: make-bcache probe-bcache bcache-super-show bcache-register
 	$(INSTALL) -m0755 make-bcache bcache-super-show	$(DESTDIR)${PREFIX}/sbin/
 	$(INSTALL) -m0755 probe-bcache bcache-register		$(DESTDIR)$(UDEVLIBDIR)/
 	$(INSTALL) -m0644 69-bcache.rules	$(DESTDIR)$(UDEVLIBDIR)/rules.d/
