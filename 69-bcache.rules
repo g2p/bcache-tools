@@ -18,7 +18,7 @@ ENV{ID_FS_TYPE}!="bcache", GOTO="bcache_backing_end"
 ENV{ID_FS_UUID_ENC}=="?*", SYMLINK+="disk/by-uuid/$env{ID_FS_UUID_ENC}"
 
 LABEL="bcache_backing_found"
-RUN{builtin}+="kmod load bcache"
+RUN+="/sbin/modprobe bcache"
 RUN+="bcache-register $tempnode"
 LABEL="bcache_backing_end"
 
