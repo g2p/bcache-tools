@@ -5,9 +5,9 @@ DRACUTLIBDIR=/lib/dracut
 INSTALL=install
 CFLAGS+=-O2 -Wall -g
 
-all: make-bcache probe-bcache bcache-super-show bcache-register
+all: make-bcache probe-bcache bcache-super-show bcache-register bcache-params
 
-install: make-bcache probe-bcache bcache-super-show bcache-register
+install: make-bcache probe-bcache bcache-super-show bcache-register bcache-params
 	$(INSTALL) -m0755 make-bcache bcache-super-show	$(DESTDIR)${PREFIX}/sbin/
 	$(INSTALL) -m0755 probe-bcache bcache-register		$(DESTDIR)$(UDEVLIBDIR)/
 	$(INSTALL) -m0644 69-bcache.rules	$(DESTDIR)$(UDEVLIBDIR)/rules.d/
@@ -30,3 +30,4 @@ bcache-super-show: LDLIBS += `pkg-config --libs uuid`
 bcache-super-show: CFLAGS += -std=gnu99
 bcache-super-show: bcache.o
 bcache-register: bcache-register.o
+bcache-params: bcache-params.o

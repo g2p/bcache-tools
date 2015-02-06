@@ -1,6 +1,7 @@
 /bcache-super-show
 /bcache-test
 /bcache-register
+/bcache-params
 /make-bcache
 /probe-bcache
 .*
