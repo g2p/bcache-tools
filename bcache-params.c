@@ -22,11 +22,8 @@
  * - sequential_cutoff (sco) is set to 0
  * - cache/congested_read_threshold_us (crdthr) is set to 0
  * - cache/congested_write_threshold_us (cwrthr) is set to 0
- * Both short aliases (for user convenience) and full parameters can be used:
- *
- * sco:    sequential_cutoff
- * crdthr: cache/congested_read_threshold_us
- * cwrthr: cache/congested_write_threshold_us
+ * Both short aliases (for user convenience) and full parameters can be used,
+ * they are defined in the parm_map.
  *
  * Other parameters are not accepted, because they're not useful or 
  * potentially harmful (e.g. changing the label, stopping bcache devices)
@@ -54,9 +51,13 @@ struct parm_map {
 };
 
 struct parm_map parm_map[] = {
-    { "sco",                          "sequential_cutoff"                  }
-,   { "crdthr",                       "cache/congested_read_threshold_us"  }
+    { "crdthr",                       "cache/congested_read_threshold_us"  }
 ,   { "cwrthr",                       "cache/congested_write_threshold_us" }
+,   { "rdahed",                       "readahead"                          }
+,   { "sctoff",                       "sequential_cutoff"                  }
+,   { "wrbdly",                       "writeback_delay"                    }
+,   { "wrbpct",                       "writeback_percent"                  }
+,   { "wrbupd",                       "writeback_rate_update_seconds"      }
 ,   { NULL                          , NULL                                 }
 };
 
