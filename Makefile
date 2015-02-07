@@ -9,7 +9,7 @@ all: make-bcache probe-bcache bcache-super-show bcache-register bcache-params
 
 install: make-bcache probe-bcache bcache-super-show bcache-register bcache-params
 	$(INSTALL) -m0755 make-bcache bcache-super-show	$(DESTDIR)${PREFIX}/sbin/
-	$(INSTALL) -m0755 probe-bcache bcache-register		$(DESTDIR)$(UDEVLIBDIR)/
+	$(INSTALL) -m0755 probe-bcache bcache-register bcache-params	$(DESTDIR)$(UDEVLIBDIR)/
 	$(INSTALL) -m0644 69-bcache.rules	$(DESTDIR)$(UDEVLIBDIR)/rules.d/
 	$(INSTALL) -m0644 -- *.8 $(DESTDIR)${PREFIX}/share/man/man8/
 	$(INSTALL) -D -m0755 initramfs/hook	$(DESTDIR)/usr/share/initramfs-tools/hooks/bcache

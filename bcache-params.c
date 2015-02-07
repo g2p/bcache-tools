@@ -16,19 +16,24 @@
  * initramfs and later.
  *
  * It recognizes parameters like these:
- *   bcache.0=sco:0,crdthr:0,cwrthr:0
+ *   bcache=sco:0,crdthr:0,cache/congested_write_threshold_us:0
  * This means:
- * - parameters are set for bcache device #0: bcache0
+ * - parameters are set for any bcache device
  * - sequential_cutoff (sco) is set to 0
  * - cache/congested_read_threshold_us (crdthr) is set to 0
  * - cache/congested_write_threshold_us (cwrthr) is set to 0
- * Because of kernel cmdline limitations all parameters ara based on a
- * short alias, which represents the long /sys filename.
- * Currently 3 parameters are supported that need to be set prior to
- * root fs mount to directly impact performance in the early boot stage.
+ * Both short aliases (for user convenience) and full parameters can be used:
+ *
+ * sco:    sequential_cutoff
+ * crdthr: cache/congested_read_threshold_us
+ * cwrthr: cache/congested_write_threshold_us
+ *
+ * Other parameters are not accepted, because they're not useful or 
+ * potentially harmful (e.g. changing the label, stopping bcache devices)
  *
  */
 
+#include <ctype.h>
 #include <stdio.h>
 #include <unistd.h>
 #include <fcntl.h>
@@ -52,28 +57,28 @@ struct parm_map parm_map[] = {
     { "sco",                          "sequential_cutoff"                  }
 ,   { "crdthr",                       "cache/congested_read_threshold_us"  }
 ,   { "cwrthr",                       "cache/congested_write_threshold_us" }
-,   { "sequential_cutoff",            "sequential_cutoff"                  }
-,   { "congested_read_threshold_us",  "cache/congested_read_threshold_us"  }
-,   { "congested_write_threshold_us", "cache/congested_write_threshold_us" }
 ,   { NULL                          , NULL                                 }
 };
 
-int read_until (int *lookahead, FILE *fp, char *buf, int maxlen, char terminator)
+int read_until (int *lookaheadp, FILE *fp, char *buf, int maxlen, char *terminators)
 {
     char *cp = buf, *ep = buf + maxlen;
+    int lookahead = *lookaheadp;
 
-    while (   *lookahead != terminator
-           && *lookahead  > ' '
-           && *lookahead != EOF
-           && cp < ep) {
-        *cp++ = *lookahead;
-        *lookahead = fgetc (fp);
+    while (   cp < ep
+           && lookahead != EOF
+           && isprint (lookahead)
+           && !strchr (terminators, lookahead)) {
+        *cp++ = lookahead;
+        lookahead = fgetc (fp);
     }
+
+    *lookaheadp = lookahead;
 
     *cp = '\0';
 
-    if (*lookahead == terminator) {
-        *lookahead = fgetc (fp);
+    if (strchr (terminators, lookahead)) {
+        *lookaheadp = fgetc (fp);
         return 1;
     }
     return 0;
@@ -81,9 +86,9 @@ int read_until (int *lookahead, FILE *fp, char *buf, int maxlen, char terminator
 
 int main(int argc, char *argv[])
 {
-    int  c, fd, bcacheid;
+    int  c, fd;
     FILE *fp;
-    char buf[256], *cp;
+    char buf[256];
     const char prefix[] = "bcache";
 
     if (argc != 2) {
@@ -106,34 +111,26 @@ int main(int argc, char *argv[])
         /* stop ehen end of the line */
         if (c == EOF) break;
 
-        if (!read_until (&c, fp, buf, sizeof (buf), '.')) goto skiprest;
+        if (!read_until (&c, fp, buf, sizeof (buf), " =")) goto skiprest;
         if (strcmp (buf, prefix) != 0) goto skiprest;
-
-        if (!read_until (&c, fp, buf, 3, '=')) goto skiprest;
-        bcacheid = strtol (buf, &cp, 10);
-        if (cp == buf || *cp != '\0') goto skiprest;
-
-        sprintf (buf, "bcache%d", bcacheid);
-        if (strcmp (buf, argv[1]) != 0) goto skiprest;
 
         for (;;) {
             struct parm_map *pmp;
             char sysfile[256];
             int ret, fd;
 
-            if (!read_until (&c, fp, buf, sizeof (buf), ':')) goto skiprest;
+            if (!read_until (&c, fp, buf, sizeof (buf), " :")) goto skiprest;
 
             for (pmp = parm_map; pmp->id != NULL; pmp++) {
-                if (strcmp (buf, pmp->id) == 0) break;
+                if (strcmp (buf, pmp->id)   == 0) break;
+                if (strcmp (buf, pmp->full) == 0) break;
             }
             /* no match? next argument */
             if (pmp->id == NULL) goto skiprest;
 
-            sprintf (sysfile, "%s/bcache%d/bcache/%s", SYSPFX, bcacheid, pmp->full);
+            sprintf (sysfile, "%s/%s/bcache/%s", SYSPFX, argv[1], pmp->full);
 
-            cp = buf;
-
-            ret = read_until (&c, fp, buf, sizeof (buf), ',');
+            ret = read_until (&c, fp, buf, sizeof (buf), " ,");
             if (!ret && c != EOF && c > ' ') goto skiprest;
 
             fd = open(sysfile, O_WRONLY);
