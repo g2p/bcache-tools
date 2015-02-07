@@ -9,25 +9,32 @@
  * moment is right before the root fs is actually mounted, which means
  * it may need to be done in the initramfs.
  *
- * The bcache kernel drivers doe snot support passing kernel cmdline
- * parameters to it. This program can be excuted from udev rules to
- * take care of it by changing bcache parameters using the /sys interface
- * right after a bcache device is brought up. This works both in the
- * initramfs and later.
+ * The bcache kernel driver does not support passing kernel cmdline
+ * arguments to it. This udev helper can be excuted from udev rules to
+ * take care of cmdline arguments by changing bcache parameters using
+ * the /sys interface right after a bcache device is brought up. This
+ * works both in the initramfs and later.
  *
- * It recognizes parameters like these:
+ * It recognizes cmdline arguments like these:
  *   bcache=sco:0,crdthr:0,cache/congested_write_threshold_us:0
  * This means:
- * - parameters are set for any bcache device
+ * - for any bcache device set the following parameters:
  * - sequential_cutoff (sco) is set to 0
  * - cache/congested_read_threshold_us (crdthr) is set to 0
  * - cache/congested_write_threshold_us (cwrthr) is set to 0
  * Both short aliases (for user convenience) and full parameters can be used,
- * they are defined in the parm_map.
+ * they are defined in the parm_map below.
  *
  * Other parameters are not accepted, because they're not useful or 
  * potentially harmful (e.g. changing the label, stopping bcache devices)
  *
+ * Parsing of each kernel cmdline argument is done in a simple way:
+ * - does the argument start with "bcache="? If not: next argument.
+ * - for the rest of the argument, identify "subarguments":
+ *   - is what follows of the form <stringP>:<stringV>? If not: next argument
+ *   - is <stringP> a know parameter name? If not: next subargument
+ *   - process the subargument
+ *   - next subargument
  */
 
 #include <ctype.h>
@@ -39,17 +46,23 @@
 #include <error.h>
 #include <errno.h>
 
-#define CMDLINE "/proc/cmdline"
-#define SYSPFX "/sys/block"
-
-/* #define CMDLINE "/tmp/cmdline"   */
-/* #define SYSPFX "/tmp"            */
+#ifndef TESTING
+#   define CMDLINE "/proc/cmdline"
+#   define SYSPFX "/sys/block"
+#else
+#   define CMDLINE "/tmp/cmdline"   
+#   define SYSPFX "/tmp"            
+#endif
 
 struct parm_map {
     char *id;
     char *full;
 };
 
+/*
+ * The list of kernel cmdline patameters that can be processed by 
+ * bcache-patams.
+ */
 struct parm_map parm_map[] = {
     { "crdthr",                       "cache/congested_read_threshold_us"  }
 ,   { "cwrthr",                       "cache/congested_write_threshold_us" }
@@ -61,6 +74,18 @@ struct parm_map parm_map[] = {
 ,   { NULL                          , NULL                                 }
 };
 
+/*
+ * Read characters from fp (/proc/cmdline) into buf until maxlen characters are
+ * read or until a character is read that is in the list of terminators.
+ *
+ * lookaheadp points to the current lookahead symbol, and is returned as such to
+ * the caller.
+ *
+ * When a characters is read that is a terminator charachter, the lookehead is moved
+ * one character ahead and the encountered terminator is returned.
+ *
+ * If for another reason reading characters stops, 0 is returned.
+ */
 int read_until (int *lookaheadp, FILE *fp, char *buf, int maxlen, char *terminators)
 {
     char *cp = buf, *ep = buf + maxlen;
@@ -80,17 +105,16 @@ int read_until (int *lookaheadp, FILE *fp, char *buf, int maxlen, char *terminat
 
     if (strchr (terminators, lookahead)) {
         *lookaheadp = fgetc (fp);
-        return 1;
+        return lookahead;
     }
     return 0;
 }
 
 int main(int argc, char *argv[])
 {
-    int  c, fd;
-    FILE *fp;
     char buf[256];
-    const char prefix[] = "bcache";
+    int  la, bufsz = sizeof (buf);
+    FILE *fp;
 
     if (argc != 2) {
         fprintf (stderr, "bcache-params takes exactly one argument\n");
@@ -102,58 +126,71 @@ int main(int argc, char *argv[])
         perror ("Error opening /proc/cmdline");
         return 1;
     }
-    c = fgetc (fp);
+    /* la is our lookahead character */
+    la = fgetc (fp);
 
-    while (c != EOF) {
+    while (la != EOF) {
         /* skip any spaces */
-        while (c == ' ') {
-            c = fgetc (fp);
+        while (la == ' ') {
+            la = fgetc (fp);
         }
         /* stop ehen end of the line */
-        if (c == EOF) break;
+        if (la == EOF) break;
 
-        if (!read_until (&c, fp, buf, sizeof (buf), " =")) goto skiprest;
-        if (strcmp (buf, prefix) != 0) goto skiprest;
+        /* process until '=' */
+        if (read_until (&la, fp, buf, bufsz, " =") != '=') goto nextarg;
+        /* did we get a "bcache=" prefix? */
+        if (strcmp (buf, "bcache") != 0) goto nextarg;
 
+        /* process subarguments */
         for (;;) {
             struct parm_map *pmp;
             char sysfile[256];
-            int ret, fd;
+            int term, fd;
 
-            if (!read_until (&c, fp, buf, sizeof (buf), " :")) goto skiprest;
+            /* all subargs start with "<string>:" */
+            if (read_until (&la, fp, buf, bufsz, " :") != ':') goto nextarg;
 
+            /* now identify <string> */
             for (pmp = parm_map; pmp->id != NULL; pmp++) {
                 if (strcmp (buf, pmp->id)   == 0) break;
                 if (strcmp (buf, pmp->full) == 0) break;
             }
-            /* no match? next argument */
-            if (pmp->id == NULL) goto skiprest;
+            /* no match for <string>? next subargument */
+            if (pmp->id == NULL) {
+                error (0, 0, "Unknown bcache parameter %s", buf);
+            } else {
+                /* Now we know what /sys file to write to */
+                sprintf (sysfile, "%s/%s/bcache/%s", SYSPFX, argv[1], pmp->full);
+             }
 
-            sprintf (sysfile, "%s/%s/bcache/%s", SYSPFX, argv[1], pmp->full);
+            /* What follows is the data to be written */
+            term = read_until (&la, fp, buf, bufsz, " ,");
 
-            ret = read_until (&c, fp, buf, sizeof (buf), " ,");
-            if (!ret && c != EOF && c > ' ') goto skiprest;
+            if (pmp->id == NULL) goto nextsubarg;
 
-            fd = open(sysfile, O_WRONLY);
-            if (fd < 0) error (0, errno, "Error opening %s", sysfile);
-
-            dprintf (fd, "%s\n", buf);
-
+            /* no data identified? next subargument */
+            if (buf[0] == '\0') {
+                error (0, 0, "Missing data for parameter %s(%s)", pmp->full, pmp->id);
+                goto nextsubarg;
+            }
+            /* we're ready to actually write the data */
+            fd = open (sysfile, O_WRONLY);
+            if (fd < 0) {
+                error (0, errno, "Error opening %s", sysfile);
+                goto nextsubarg;
+            }
+            if (dprintf (fd, "%s\n", buf) < 0) {
+                error (0, errno, "Error writing %s to %s", buf, sysfile);
+            }
             close (fd);
-
-            if (!ret) break;
+            /* From here there's the hope for another subargument */
+        nextsubarg:
+            if (term != ',') break;
         }
-    skiprest:
-        while (c != EOF && c != ' ') c = fgetc (fp);
+    nextarg:
+        while (la != EOF && la != ' ') la = fgetc (fp);
     }
-
-return 0;
-    if (dprintf(fd, "%s\n", argv[1]) < 0)
-    {
-        fprintf(stderr, "Error registering %s with bcache: %m\n", argv[1]);
-        return 1;
-    }
-
     return 0;
 }
 
