@@ -29,6 +29,9 @@ installkernel() {
 }
 
 install() {
-    inst_multiple ${udevdir}/probe-bcache ${udevdir}/bcache-register
+    inst_multiple \
+        ${udevdir}/probe-bcache \
+        ${udevdir}/bcache-register \
+        ${udevdir}/bcache-params
     inst_rules 69-bcache.rules
 }
