@@ -88,7 +88,7 @@ struct parm_map parm_map[] = {
  */
 int read_until (int *lookaheadp, FILE *fp, char *buf, int maxlen, char *terminators)
 {
-    char *cp = buf, *ep = buf + maxlen;
+    char *cp = buf, *ep = buf + maxlen - 1;
     int lookahead = *lookaheadp;
 
     while (   cp < ep
