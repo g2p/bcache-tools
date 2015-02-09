@@ -16,10 +16,10 @@
  * works both in the initramfs and later.
  *
  * It recognizes cmdline arguments like these:
- *   bcache=sco:0,crdthr:0,cache/congested_write_threshold_us:0
+ *   bcache=sctoff:0,crdthr:0,cache/congested_write_threshold_us:0
  * This means:
  * - for any bcache device set the following parameters:
- * - sequential_cutoff (sco) is set to 0
+ * - sequential_cutoff (sctoff) is set to 0
  * - cache/congested_read_threshold_us (crdthr) is set to 0
  * - cache/congested_write_threshold_us (cwrthr) is set to 0
  * Both short aliases (for user convenience) and full parameters can be used,
