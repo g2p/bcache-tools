@@ -3,7 +3,7 @@
 make-bcache \- create a cache device
 .SH  SYNOPSIS
 .B make-bcache
-[\fB \-U\ \fIUUID\fR ]
+[\fB \-u\ \fIUUID\fR ]
 [\fB \-b\ \fIbucket-size\fR ]
 .I device
 .SH OPTIONS
@@ -14,8 +14,23 @@ Create a cache
 .BR \-B
 Create a backing device (kernel functionality not yet implemented)
 .TP
-.BR \-U\ \fIUUID
-Create a cache device with the specified UUID
+.BR \-w ", " \-\-block\ \fIblock size
+Specify the hard sector size of SSD, often 2K
+.TP
+.BR \-u ", " \-\-cset-uuid\ \fIUUID
+Create a cache set with the specified UUID
+.TP
+.BR \-p ", " \-\-cache_replacement_policy\ \fIlru|fifo|random
+Specify one of the three cache replacement policies: lru, fifo , random or none.
+.TP
+.BR \-\-writeback
+Enable writeback
+.TP
+.BR \-\-discard
+Enable discard
+.TP
+.BR \-\-wipe-bcache
+Enable wipe-bcache
 .TP
 .BR \-b\ \fIbucket-size
 Specifies the bucket size. Allocation is done in terms of buckets, and cache
