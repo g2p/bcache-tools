@@ -150,12 +150,13 @@ void usage()
 	       "	-B, --bdev		Format a backing device\n"
 	       "	-b, --bucket		bucket size\n"
 	       "	-w, --block		block size (hard sector size of SSD, often 2k)\n"
-	       "	-o, --data-offset	data offset in sectors\n"
-	       "	    --cset-uuid		UUID for the cache set\n"
+	       "	-o, --data-offset	data offset in sectors.\n"
+	       "	-u, --cset-uuid		UUID for the cache set\n"
 //	       "	-U			UUID\n"
 	       "	    --writeback		enable writeback\n"
 	       "	    --discard		enable discards\n"
-	       "	    --cache_replacement_policy=(lru|fifo)\n"
+		   "	    --wipe-bcache   enable wipe-bcache\n"
+	       "	-p, --cache_replacement_policy=(lru|fifo|random).\n"
 	       "	-h, --help		display this help and exit\n");
 	exit(EXIT_FAILURE);
 }
