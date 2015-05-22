@@ -117,7 +117,7 @@ BITMASK(BDEV_STATE,		struct cache_sb, flags, 61, 2);
 
 extern const uint64_t crc_table[];
 
-inline uint64_t crc64(const void *_data, size_t len)
+static inline uint64_t crc64(const void *_data, size_t len)
 {
         uint64_t crc = 0xFFFFFFFFFFFFFFFFULL;
         const unsigned char *data = _data;
