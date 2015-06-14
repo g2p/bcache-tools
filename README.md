@@ -1,11 +1,14 @@
 # bcache
 These are the userspace tools required for bcache.
 
-`bcache` is a patch for the Linux kernel (developed in the kernel source tree) 
+`bcache` is integrated in the Linux kernel (developed in the kernel source tree)
 to use SSDs to cache other block
 devices. For more information, see http://bcache.evilpiepirate.org.
 Documentation for the run time interface is included in the kernel tree, in
-[Documentation/bcache.txt](https://git.kernel.org/cgit/linux/kernel/git/torvalds/linux.git/tree/Documentation/bcache.txt).
+[Documentation/bcache.txt](https://git.kernel.org/cgit/linux/kernel/git/torvalds/linux.git/tree/Documentation/bcache.txt). In order to use it you need
+to set the `CONFIG_BCACHE` setting in the `.config` file of the linux source
+build to `m` (to get built a loadable module) or `y` (to built `bcache` into
+the kernel).
 
 # usespace tools
 
