@@ -11,6 +11,8 @@ KERNEL=="fd*|sr*", GOTO="bcache_end"
 ENV{ID_FS_TYPE}=="bcache", GOTO="bcache_backing_found"
 # It recognised something else; bail
 ENV{ID_FS_TYPE}=="?*", GOTO="bcache_backing_end"
+# Explicitly bail out for floppy drives (< util-linux-2.24)
+DRIVERS=="floppy", GOTO="bcache_end"
 
 # Backing devices: scan, symlink, register
 IMPORT{program}="probe-bcache -o udev $tempnode"
