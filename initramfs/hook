@@ -22,6 +22,7 @@ elif [ -e /lib/udev/rules.d/69-bcache.rules ]; then
     cp -pt "${DESTDIR}/lib/udev/rules.d" /lib/udev/rules.d/69-bcache.rules
 fi
 
+copy_exec /lib/udev/bcache-export-cached
 copy_exec /lib/udev/bcache-register
 copy_exec /lib/udev/probe-bcache
 manual_add_modules bcache
