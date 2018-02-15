@@ -23,10 +23,9 @@ RUN+="bcache-register $tempnode"
 LABEL="bcache_backing_end"
 
 # Cached devices: symlink
-DRIVER=="bcache", ENV{CACHED_UUID}=="?*", \
-        SYMLINK+="bcache/by-uuid/$env{CACHED_UUID}"
-DRIVER=="bcache", ENV{CACHED_LABEL}=="?*", \
-        SYMLINK+="bcache/by-label/$env{CACHED_LABEL}"
+IMPORT{program}="bcache-export-cached $tempnode"
+ENV{CACHED_UUID}=="?*", SYMLINK+="bcache/by-uuid/$env{CACHED_UUID}"
+ENV{CACHED_LABEL}=="?*", SYMLINK+="bcache/by-label/$env{CACHED_LABEL}"
 
 LABEL="bcache_end"
 
