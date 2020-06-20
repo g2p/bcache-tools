@@ -4,6 +4,7 @@ UDEVLIBDIR=/lib/udev
 DRACUTLIBDIR=/lib/dracut
 INSTALL=install
 CFLAGS+=-O2 -Wall -g
+PKG_CONFIG=pkg-config
 
 all: make-bcache probe-bcache bcache-super-show bcache-register
 
@@ -20,13 +21,13 @@ install: make-bcache probe-bcache bcache-super-show
 clean:
 	$(RM) -f make-bcache probe-bcache bcache-super-show bcache-test -- *.o
 
-bcache-test: LDLIBS += `pkg-config --libs openssl` -lm
-make-bcache: LDLIBS += `pkg-config --libs uuid blkid`
-make-bcache: CFLAGS += `pkg-config --cflags uuid blkid`
+bcache-test: LDLIBS += `$(PKG_CONFIG) --libs openssl` -lm
+make-bcache: LDLIBS += `$(PKG_CONFIG) --libs uuid blkid`
+make-bcache: CFLAGS += `$(PKG_CONFIG) --cflags uuid blkid`
 make-bcache: bcache.o
-probe-bcache: LDLIBS += `pkg-config --libs uuid blkid`
-probe-bcache: CFLAGS += `pkg-config --cflags uuid blkid`
-bcache-super-show: LDLIBS += `pkg-config --libs uuid`
+probe-bcache: LDLIBS += `$(PKG_CONFIG) --libs uuid blkid`
+probe-bcache: CFLAGS += `$(PKG_CONFIG) --cflags uuid blkid`
+bcache-super-show: LDLIBS += `$(PKG_CONFIG) --libs uuid`
 bcache-super-show: CFLAGS += -std=gnu99
 bcache-super-show: bcache.o
 bcache-register: bcache-register.o
