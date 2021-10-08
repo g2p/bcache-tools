@@ -80,7 +80,7 @@ int main(int argc, char **argv)
 			       "ID_FS_TYPE=bcache\n",
 			       uuid, uuid);
 		else
-			printf("%s: UUID=\"\" TYPE=\"bcache\"\n", uuid);
+			printf("%s: UUID=\"%s\" TYPE=\"bcache\"\n", argv[i], uuid);
 	}
 
 	return 0;
